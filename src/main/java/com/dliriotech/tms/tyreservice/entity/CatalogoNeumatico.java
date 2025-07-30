@@ -26,7 +26,7 @@ public class CatalogoNeumatico {
     private String modeloDiseno;
 
     @Column("tipo_uso")
-    private TipoUso tipoUso;
+    private String tipoUso;
 
     @Column("rtd_original")
     private BigDecimal rtdOriginal;
@@ -39,18 +39,4 @@ public class CatalogoNeumatico {
     private String traccion;
 
     private String temperatura;
-
-    @Getter
-    public enum TipoUso {
-        TODA_POSICION("Toda Posición"),
-        DIRECCIONAL("Direccional"),
-        TRACCION("Tracción"),
-        REMOLQUE("Remolque");
-
-        private final String valor;
-
-        TipoUso(String valor) {
-            this.valor = valor;
-        }
-    }
 }

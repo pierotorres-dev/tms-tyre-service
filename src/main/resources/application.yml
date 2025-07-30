@@ -1,6 +1,7 @@
 spring:
   application:
     name: tms-tyre-service
+
   r2dbc:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -70,15 +71,16 @@ springdoc:
     url: /openapi.yaml
     path: /swagger-ui.html
 
-#app:
-#  cache:
-#    ttl-hours: 24
-#    prefixes:
-#      estado-equipo: "cache:estadoEquipo:all"
-#      estado-observacion: "cache:estadoObservacion:all"
-#      tipo-observacion-neumatico: "cache:tipoObservacionNeumatico:all"
-#      tipo-equipo: "cache:tipoEquipo"
-#      esquema-equipo: "cache:esquemaEquipo"
+app:
+  cache:
+    ttl-hours: 24
+    prefixes:
+      catalogo-neumatico: "cache:catalogoNeumatico"
+      proveedor: "cache:proveedor"
+      diseno-reencauche: "cache:disenoReencauche"
+      clasificacion-neumatico: "cache:clasificacionNeumatico"
+      marca-neumatico: "cache:marcaNeumatico"
+      medida-neumatico: "cache:medidaNeumatico"
 
 server:
   port: 8083

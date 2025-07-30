@@ -23,15 +23,7 @@ public class NeumaticoController {
 
     @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(@PathVariable Integer equipoId) {
-        log.info("Solicitando neumáticos para equipo: {}", equipoId);
-        
-        return neumaticoService.getAllNeumaticosByEquipoId(equipoId)
-                .doOnSubscribe(subscription -> log.debug("Iniciando consulta de neumáticos para equipo: {}", equipoId))
-                .doOnNext(neumatico -> log.debug("Neumático encontrado: {} - Posición: {}", 
-                    neumatico.getId(), neumatico.getPosicion()))
-                .doOnComplete(() -> log.debug("Consulta completada para equipo: {}", equipoId))
-                .doOnError(error -> log.error("Error obteniendo neumáticos para equipo {}: {}", 
-                    equipoId, error.getMessage()));
+        return neumaticoService.getAllNeumaticosByEquipoId(equipoId);
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)

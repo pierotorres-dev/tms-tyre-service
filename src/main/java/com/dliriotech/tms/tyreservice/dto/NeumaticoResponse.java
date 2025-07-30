@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class NeumaticoResponse {
 
     private Integer kmInstalacion;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaInstalacion;
 
     private BigDecimal rtd1;

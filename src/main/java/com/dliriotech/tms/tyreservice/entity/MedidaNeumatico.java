@@ -17,7 +17,7 @@ public class MedidaNeumatico {
     private String descripcion;
 
     @Column("tipo_construccion")
-    private TipoConstruccion tipoConstruccion;
+    private String tipoConstruccion;
 
     @Column("indice_carga")
     private String indiceCarga;
@@ -27,17 +27,4 @@ public class MedidaNeumatico {
 
     @Column("ply_rating")
     private Integer plyRating;
-
-    @Getter
-    public enum TipoConstruccion {
-        RADIAL("Radial"),
-        CONVENCIONAL("Convencional");
-
-        private final String valor;
-
-        TipoConstruccion(String valor) {
-            this.valor = valor;
-        }
-
-    }
 }

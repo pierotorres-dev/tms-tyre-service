@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -44,6 +45,7 @@ public class Neumatico {
     private Integer kmInstalacion;
 
     @Column("fecha_instalacion")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaInstalacion;
 
     private BigDecimal rtd1;
