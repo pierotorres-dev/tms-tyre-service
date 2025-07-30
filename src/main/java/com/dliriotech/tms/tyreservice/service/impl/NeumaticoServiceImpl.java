@@ -35,7 +35,15 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
     @Override
     public Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request) {
-        return null;
+        Neumatico entity = mapRequestToEntity(request);
+
+        return neumaticoRepository.save(entity)
+                .flatMap(this::enrichNeumaticoWithRelations)
+                .doOnSubscribe(s -> log.debug("Iniciando guardado de nuevo neumático"))
+                .doOnSuccess(result -> log.debug("Neumático guardado exitosamente: {}", result.getId()))
+                .doOnError(error -> log.error("Error al guardar neumático: {}", error.getMessage()))
+                .onErrorResume(e -> Mono.error(new NeumaticoException(
+                        "TYR-NEU-OPE-002", "Error al guardar neumático")));
     }
 
     private Mono<NeumaticoResponse> enrichNeumaticoWithRelations(Neumatico neumatico) {
@@ -67,6 +75,28 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 tuple.getT3(), 
                 tuple.getT4()))
                 .subscribeOn(Schedulers.boundedElastic()));
+    }
+
+    private Neumatico mapRequestToEntity(NeumaticoRequest request) {
+        return Neumatico.builder()
+                .empresaId(request.getEmpresaId())
+                .catalogoNeumaticoId(request.getCatalogoNeumaticoId())
+                .equipoId(request.getEquipoId())
+                .posicion(request.getPosicion())
+                .serieCodigo(request.getSerieCodigo())
+                .costoInicial(request.getCostoInicial())
+                .proveedorCompraId(request.getProveedorCompraId())
+                .kmInstalacion(request.getKmInstalacion())
+                .fechaInstalacion(request.getFechaInstalacion())
+                .rtd1(request.getRtd1())
+                .rtd2(request.getRtd2())
+                .rtd3(request.getRtd3())
+                .rtdActual(request.getRtdActual())
+                .kmAcumulados(request.getKmAcumulados())
+                .numeroReencauches(request.getNumeroReencauches())
+                .disenoReencaucheActualId(request.getDisenoReencaucheActualId())
+                .clasificacionId(request.getClasificacionId())
+                .build();
     }
 
     private NeumaticoResponse mapEntityToResponse(

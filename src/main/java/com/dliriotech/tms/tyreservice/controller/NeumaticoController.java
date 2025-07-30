@@ -26,17 +26,9 @@ public class NeumaticoController {
         return neumaticoService.getAllNeumaticosByEquipoId(equipoId);
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<NeumaticoResponse> createNeumatico(@Valid @RequestBody NeumaticoRequest request) {
-        log.info("Creando nuevo neumático: serie {}, equipo {}, posición {}",
-                request.getSerieCodigo(), request.getEquipoId(), request.getPosicion());
-
-        return neumaticoService.saveNeumatico(request)
-                .doOnSubscribe(subscription -> log.debug("Iniciando creación de neumático: {}", request.getSerieCodigo()))
-                .doOnNext(response -> log.info("Neumático creado exitosamente: ID {}, Serie {}",
-                        response.getId(), response.getSerieCodigo()))
-                .doOnError(error -> log.error("Error creando neumático con serie {}: {}",
-                        request.getSerieCodigo(), error.getMessage()));
+        return neumaticoService.saveNeumatico(request);
     }
 }
