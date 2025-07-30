@@ -1,0 +1,85 @@
+spring:
+  application:
+    name: tms-tyre-service
+  r2dbc:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    pool:
+      initial-size: 10
+      max-size: 30
+      max-idle-time: 10m
+      max-create-connection-time: 2s
+      validation-query: SELECT 1
+      validation-depth: REMOTE
+      max-life-time: 30m
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      database: 0
+      timeout: 2000ms
+      client-type: lettuce
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+# Observabilidad - Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+      livenessState:
+        enabled: true
+      readinessState:
+        enabled: true
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+    enable:
+      r2dbc:
+        client: true
+
+# Logging estructurado
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId:-}, %X{spanId:-}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.dliriotech.tms.tyreservice: INFO
+    org.springframework.security: INFO
+    org.springframework.r2dbc: DEBUG
+    io.r2dbc.pool: DEBUG
+
+springdoc:
+  swagger-ui:
+    url: /openapi.yaml
+    path: /swagger-ui.html
+
+#app:
+#  cache:
+#    ttl-hours: 24
+#    prefixes:
+#      estado-equipo: "cache:estadoEquipo:all"
+#      estado-observacion: "cache:estadoObservacion:all"
+#      tipo-observacion-neumatico: "cache:tipoObservacionNeumatico:all"
+#      tipo-equipo: "cache:tipoEquipo"
+#      esquema-equipo: "cache:esquemaEquipo"
+
+server:
+  port: 8083
+  shutdown: graceful
