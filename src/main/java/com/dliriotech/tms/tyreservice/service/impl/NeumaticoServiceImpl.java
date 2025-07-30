@@ -3,6 +3,10 @@ package com.dliriotech.tms.tyreservice.service.impl;
 import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.entity.Neumatico;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
+import com.dliriotech.tms.tyreservice.exception.ValidationException;
+import com.dliriotech.tms.tyreservice.exception.DataIntegrityException;
+import com.dliriotech.tms.tyreservice.exception.PosicionAlreadyOccupiedException;
+import com.dliriotech.tms.tyreservice.exception.NeumaticoNotFoundException;
 import com.dliriotech.tms.tyreservice.repository.NeumaticoRepository;
 import com.dliriotech.tms.tyreservice.service.NeumaticoEntityCacheService;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
@@ -23,27 +27,202 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
     @Override
     public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId) {
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(new ValidationException("equipoId", "debe ser un número positivo válido"));
+        }
+
         return neumaticoRepository.getAllByEquipoIdOrderByPosicionDesc(equipoId)
                 .flatMap(this::enrichNeumaticoWithRelations)
                 .doOnSubscribe(s -> log.debug("Iniciando consulta de neumáticos para equipo {}", equipoId))
                 .doOnComplete(() -> log.debug("Consulta de neumáticos para equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener neumáticos para equipo {}: {}",
                         equipoId, error.getMessage()))
-                .onErrorResume(e -> Flux.error(new NeumaticoException(
-                        "TYR-NEU-OPE-001", "Error al obtener neumáticos del equipo " + equipoId)));
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof ValidationException) {
+                        return Flux.error(throwable);
+                    }
+                    return Flux.error(new NeumaticoException(
+                            "TYR-NEU-OPE-001", "Error al obtener neumáticos del equipo " + equipoId, throwable));
+                });
     }
 
     @Override
     public Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request) {
-        Neumatico entity = mapRequestToEntity(request);
-
-        return neumaticoRepository.save(entity)
-                .flatMap(this::enrichNeumaticoWithRelations)
+        return validateNeumaticoRequest(request)
+                .then(validatePosicionAvailability(request.getEquipoId(), request.getPosicion()))
+                .then(Mono.fromCallable(() -> mapRequestToEntity(request)))
+                .flatMap(entity -> neumaticoRepository.save(entity)
+                        .flatMap(this::enrichNeumaticoWithRelations))
                 .doOnSubscribe(s -> log.debug("Iniciando guardado de nuevo neumático"))
                 .doOnSuccess(result -> log.debug("Neumático guardado exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar neumático: {}", error.getMessage()))
-                .onErrorResume(e -> Mono.error(new NeumaticoException(
-                        "TYR-NEU-OPE-002", "Error al guardar neumático")));
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof ValidationException || 
+                        throwable instanceof PosicionAlreadyOccupiedException) {
+                        return Mono.error(throwable);
+                    }
+                    
+                    // Manejar violaciones específicas de constraints de base de datos
+                    String errorMessage = throwable.getMessage();
+                    if (errorMessage != null) {
+                        // Constraint de serie única
+                        if (errorMessage.contains("Duplicate entry") && errorMessage.contains("serie_codigo")) {
+                            return Mono.error(new DataIntegrityException(
+                                "Ya existe un neumático con el código de serie '" + request.getSerieCodigo() + "'", 
+                                throwable));
+                        }
+                        
+                        // Constraint de equipo-posición única
+                        if (errorMessage.contains("uk_equipo_posicion") || 
+                           (errorMessage.contains("Duplicate entry") && errorMessage.contains("id_equipo") && errorMessage.contains("posicion"))) {
+                            return Mono.error(new PosicionAlreadyOccupiedException(
+                                request.getEquipoId(), request.getPosicion()));
+                        }
+                        
+                        // Otras violaciones de integridad
+                        if (errorMessage.contains("Duplicate entry")) {
+                            return Mono.error(new DataIntegrityException(
+                                "Ya existe un registro con los datos proporcionados", throwable));
+                        }
+                        
+                        // Violaciones de foreign key
+                        if (errorMessage.contains("foreign key constraint") || errorMessage.contains("Cannot add or update")) {
+                            if (errorMessage.contains("catalogo_neumatico")) {
+                                return Mono.error(new ValidationException("catalogoNeumaticoId", 
+                                    "no existe en el catálogo de neumáticos"));
+                            }
+                            if (errorMessage.contains("proveedor")) {
+                                return Mono.error(new ValidationException("proveedorCompraId", 
+                                    "no existe en el registro de proveedores"));
+                            }
+                            if (errorMessage.contains("clasificacion")) {
+                                return Mono.error(new ValidationException("clasificacionId", 
+                                    "no existe en las clasificaciones de neumáticos"));
+                            }
+                            if (errorMessage.contains("diseno_reencauche")) {
+                                return Mono.error(new ValidationException("disenoReencaucheActualId", 
+                                    "no existe en los diseños de reencauche"));
+                            }
+                            return Mono.error(new DataIntegrityException(
+                                "Referencia inválida a un registro relacionado", throwable));
+                        }
+                    }
+                    
+                    return Mono.error(new NeumaticoException(
+                            "TYR-NEU-OPE-002", "Error al guardar neumático", throwable));
+                });
+    }
+
+    @Override
+    public Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request) {
+        if (id == null || id <= 0) {
+            return Mono.error(new ValidationException("id", "debe ser un número positivo válido"));
+        }
+
+        return validateNeumaticoRequest(request)
+                .then(neumaticoRepository.findById(id)
+                        .switchIfEmpty(Mono.error(new NeumaticoNotFoundException(id.toString())))
+                        .flatMap(existingNeumatico -> {
+                            // Solo validar posición si está cambiando
+                            if (!existingNeumatico.getEquipoId().equals(request.getEquipoId()) ||
+                                !existingNeumatico.getPosicion().equals(request.getPosicion())) {
+                                return validatePosicionAvailabilityForUpdate(request.getEquipoId(), request.getPosicion(), id)
+                                        .thenReturn(existingNeumatico);
+                            }
+                            return Mono.just(existingNeumatico);
+                        })
+                        .map(existingNeumatico -> {
+                            // Actualizar los campos del neumático existente
+                            existingNeumatico.setEmpresaId(request.getEmpresaId());
+                            existingNeumatico.setCatalogoNeumaticoId(request.getCatalogoNeumaticoId());
+                            existingNeumatico.setEquipoId(request.getEquipoId());
+                            existingNeumatico.setPosicion(request.getPosicion());
+                            existingNeumatico.setSerieCodigo(request.getSerieCodigo());
+                            existingNeumatico.setCostoInicial(request.getCostoInicial());
+                            existingNeumatico.setProveedorCompraId(request.getProveedorCompraId());
+                            existingNeumatico.setKmInstalacion(request.getKmInstalacion());
+                            existingNeumatico.setFechaInstalacion(request.getFechaInstalacion());
+                            existingNeumatico.setRtd1(request.getRtd1());
+                            existingNeumatico.setRtd2(request.getRtd2());
+                            existingNeumatico.setRtd3(request.getRtd3());
+                            existingNeumatico.setRtdActual(request.getRtdActual());
+                            existingNeumatico.setKmAcumulados(request.getKmAcumulados());
+                            existingNeumatico.setNumeroReencauches(request.getNumeroReencauches());
+                            existingNeumatico.setDisenoReencaucheActualId(request.getDisenoReencaucheActualId());
+                            existingNeumatico.setClasificacionId(request.getClasificacionId());
+                            return existingNeumatico;
+                        })
+                        .flatMap(neumaticoRepository::save)
+                        .flatMap(this::enrichNeumaticoWithRelations))
+                .doOnSubscribe(s -> log.debug("Iniciando actualización de neumático {}", id))
+                .doOnSuccess(result -> log.debug("Neumático {} actualizado exitosamente", id))
+                .doOnError(error -> log.error("Error al actualizar neumático {}: {}", id, error.getMessage()))
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof ValidationException || 
+                        throwable instanceof NeumaticoNotFoundException ||
+                        throwable instanceof PosicionAlreadyOccupiedException) {
+                        return Mono.error(throwable);
+                    }
+                    
+                    // Manejar violaciones específicas de constraints de base de datos (similar al saveNeumatico)
+                    String errorMessage = throwable.getMessage();
+                    if (errorMessage != null) {
+                        if (errorMessage.contains("Duplicate entry") && errorMessage.contains("serie_codigo")) {
+                            return Mono.error(new DataIntegrityException(
+                                "Ya existe otro neumático con el código de serie '" + request.getSerieCodigo() + "'", 
+                                throwable));
+                        }
+                        
+                        if (errorMessage.contains("uk_equipo_posicion") || 
+                           (errorMessage.contains("Duplicate entry") && errorMessage.contains("id_equipo") && errorMessage.contains("posicion"))) {
+                            return Mono.error(new PosicionAlreadyOccupiedException(
+                                request.getEquipoId(), request.getPosicion()));
+                        }
+                    }
+                    
+                    return Mono.error(new NeumaticoException(
+                            "TYR-NEU-OPE-003", "Error al actualizar neumático", throwable));
+                });
+    }
+
+    private Mono<Void> validateNeumaticoRequest(NeumaticoRequest request) {
+        if (request == null) {
+            return Mono.error(new ValidationException("La solicitud no puede ser nula"));
+        }
+        if (request.getCatalogoNeumaticoId() == null || request.getCatalogoNeumaticoId() <= 0) {
+            return Mono.error(new ValidationException("catalogoNeumaticoId", "debe ser un número positivo válido"));
+        }
+        if (request.getEquipoId() == null || request.getEquipoId() <= 0) {
+            return Mono.error(new ValidationException("equipoId", "debe ser un número positivo válido"));
+        }
+        if (request.getSerieCodigo() == null || request.getSerieCodigo().trim().isEmpty()) {
+            return Mono.error(new ValidationException("serieCodigo", "no puede estar vacío"));
+        }
+        if (request.getPosicion() == null || request.getPosicion() <= 0) {
+            return Mono.error(new ValidationException("posicion", "debe ser un número positivo válido"));
+        }
+        return Mono.empty();
+    }
+
+    private Mono<Void> validatePosicionAvailability(Integer equipoId, Integer posicion) {
+        log.debug("Validando disponibilidad de posición {} en equipo {}", posicion, equipoId);
+        return neumaticoRepository.findByEquipoIdAndPosicion(equipoId, posicion)
+                .doOnNext(found -> log.debug("Encontrado neumático existente en posición: {}", found.getSerieCodigo()))
+                .flatMap(existingNeumatico -> {
+                    log.warn("Posición {} del equipo {} ya está ocupada por neumático {}", 
+                        posicion, equipoId, existingNeumatico.getSerieCodigo());
+                    return Mono.<Void>error(
+                        new PosicionAlreadyOccupiedException(equipoId, posicion, existingNeumatico.getSerieCodigo()));
+                })
+                .doOnSuccess(v -> log.debug("Posición {} en equipo {} está disponible", posicion, equipoId))
+                .then();
+    }
+
+    private Mono<Void> validatePosicionAvailabilityForUpdate(Integer equipoId, Integer posicion, Integer excludeId) {
+        return neumaticoRepository.findByEquipoIdAndPosicionAndIdNot(equipoId, posicion, excludeId)
+                .flatMap(existingNeumatico -> Mono.<Void>error(
+                    new PosicionAlreadyOccupiedException(equipoId, posicion, existingNeumatico.getSerieCodigo())))
+                .then();
     }
 
     private Mono<NeumaticoResponse> enrichNeumaticoWithRelations(Neumatico neumatico) {

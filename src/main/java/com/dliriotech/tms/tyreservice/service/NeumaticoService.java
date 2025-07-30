@@ -9,4 +9,6 @@ public interface NeumaticoService {
     Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId);
     
     Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request);
+    
+    Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request);
 }

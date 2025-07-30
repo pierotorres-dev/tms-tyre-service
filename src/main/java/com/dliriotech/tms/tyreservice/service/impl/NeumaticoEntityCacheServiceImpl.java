@@ -1,7 +1,7 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.dto.*;
-import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
+import com.dliriotech.tms.tyreservice.exception.*;
 import com.dliriotech.tms.tyreservice.repository.*;
 import com.dliriotech.tms.tyreservice.service.NeumaticoEntityCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,11 +56,16 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, CatalogoNeumaticoResponse.class)
                 .switchIfEmpty(catalogoNeumaticoRepository.findById(catalogoId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-CAT-NF-001", "Catálogo de neumático no encontrado: " + catalogoId)))
+                        .switchIfEmpty(Mono.error(new CatalogoNeumaticoNotFoundException(catalogoId.toString())))
                         .flatMap(this::enrichCatalogoWithRelations)
                         .flatMap(catalogoResponse -> cacheEntity(cacheKey, catalogoResponse)
-                                .thenReturn(catalogoResponse)))
+                                .thenReturn(catalogoResponse))
+                        .onErrorMap(throwable -> {
+                            if (throwable instanceof CatalogoNeumaticoNotFoundException) {
+                                return throwable;
+                            }
+                            return new CacheOperationException("obtener catálogo", throwable.getMessage(), throwable);
+                        }))
                 .doOnSuccess(catalogo -> log.debug("Catálogo de neumático {} obtenido desde cache/DB", catalogoId))
                 .doOnError(error -> log.error("Error al obtener catálogo de neumático {}: {}", catalogoId, error.getMessage()));
     }
@@ -71,15 +76,20 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, ProveedorResponse.class)
                 .switchIfEmpty(proveedorRepository.findById(proveedorId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-PRV-NF-001", "Proveedor no encontrado: " + proveedorId)))
+                        .switchIfEmpty(Mono.error(new ProveedorNotFoundException(proveedorId.toString())))
                         .map(proveedor -> ProveedorResponse.builder()
                                 .id(proveedor.getId())
                                 .nombre(proveedor.getNombre())
                                 .ruc(proveedor.getRuc())
                                 .build())
                         .flatMap(proveedorResponse -> cacheEntity(cacheKey, proveedorResponse)
-                                .thenReturn(proveedorResponse)))
+                                .thenReturn(proveedorResponse))
+                        .onErrorMap(throwable -> {
+                            if (throwable instanceof ProveedorNotFoundException) {
+                                return throwable;
+                            }
+                            return new CacheOperationException("obtener proveedor", throwable.getMessage(), throwable);
+                        }))
                 .doOnSuccess(proveedor -> log.debug("Proveedor {} obtenido desde cache/DB", proveedorId))
                 .doOnError(error -> log.error("Error al obtener proveedor {}: {}", proveedorId, error.getMessage()));
     }

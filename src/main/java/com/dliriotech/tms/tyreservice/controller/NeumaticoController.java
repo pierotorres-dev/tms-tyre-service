@@ -16,7 +16,6 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/v1/neumaticos")
 @RequiredArgsConstructor
-@Slf4j
 public class NeumaticoController {
 
     private final NeumaticoService neumaticoService;
@@ -30,5 +29,11 @@ public class NeumaticoController {
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<NeumaticoResponse> createNeumatico(@Valid @RequestBody NeumaticoRequest request) {
         return neumaticoService.saveNeumatico(request);
+    }
+
+    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<NeumaticoResponse> updateNeumatico(@PathVariable Integer id, 
+                                                   @Valid @RequestBody NeumaticoRequest request) {
+        return neumaticoService.updateNeumatico(id, request);
     }
 }

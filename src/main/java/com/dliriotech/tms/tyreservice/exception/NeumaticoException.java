@@ -1,21 +1,25 @@
 package com.dliriotech.tms.tyreservice.exception;
 
-import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
-@Getter
-public class NeumaticoException extends RuntimeException {
-    private final String errorCode;
-    private final String message;
-
-    public NeumaticoException(String errorCode, String message) {
-        super(message);
-        this.errorCode = errorCode;
-        this.message = message;
+/**
+ * Excepción específica para operaciones relacionadas con neumáticos.
+ */
+public class NeumaticoException extends TyreServiceException {
+    
+    public NeumaticoException(String code, String message) {
+        super(message, code);
     }
 
-    public NeumaticoException(String errorCode, String message, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
-        this.message = message;
+    public NeumaticoException(String code, String message, HttpStatus status) {
+        super(message, status, code);
+    }
+
+    public NeumaticoException(String code, String message, Throwable cause) {
+        super(message, code, cause);
+    }
+
+    public NeumaticoException(String code, String message, HttpStatus status, Throwable cause) {
+        super(message, status, code, cause);
     }
 }
