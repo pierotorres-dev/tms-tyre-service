@@ -63,8 +63,8 @@ logging:
     root: INFO
     com.dliriotech.tms.tyreservice: INFO
     org.springframework.security: INFO
-    org.springframework.r2dbc: DEBUG
-    io.r2dbc.pool: DEBUG
+    org.springframework.r2dbc: INFO
+    io.r2dbc.pool: INFO
 
 springdoc:
   swagger-ui:

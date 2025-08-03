@@ -10,6 +10,7 @@ import com.dliriotech.tms.tyreservice.exception.NeumaticoNotFoundException;
 import com.dliriotech.tms.tyreservice.repository.NeumaticoRepository;
 import com.dliriotech.tms.tyreservice.service.NeumaticoEntityCacheService;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
+import com.dliriotech.tms.tyreservice.service.RtdThresholdService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
     private final NeumaticoRepository neumaticoRepository;
     private final NeumaticoEntityCacheService neumaticoEntityCacheService;
+    private final RtdThresholdService rtdThresholdService;
 
     @Override
     public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId) {
@@ -33,8 +35,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
         return neumaticoRepository.getAllByEquipoIdOrderByPosicionDesc(equipoId)
                 .flatMap(this::enrichNeumaticoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de neumáticos para equipo {}", equipoId))
-                .doOnComplete(() -> log.debug("Consulta de neumáticos para equipo {} completada", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de neumáticos para equipo {}", equipoId))
+                .doOnComplete(() -> log.info("Consulta de neumáticos para equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener neumáticos para equipo {}: {}",
                         equipoId, error.getMessage()))
                 .onErrorResume(throwable -> {
@@ -53,8 +55,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 .then(Mono.fromCallable(() -> mapRequestToEntity(request)))
                 .flatMap(entity -> neumaticoRepository.save(entity)
                         .flatMap(this::enrichNeumaticoWithRelations))
-                .doOnSubscribe(s -> log.debug("Iniciando guardado de nuevo neumático"))
-                .doOnSuccess(result -> log.debug("Neumático guardado exitosamente: {}", result.getId()))
+                .doOnSubscribe(s -> log.info("Iniciando guardado de nuevo neumático"))
+                .doOnSuccess(result -> log.info("Neumático guardado exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar neumático: {}", error.getMessage()))
                 .onErrorResume(throwable -> {
                     if (throwable instanceof ValidationException || 
@@ -154,8 +156,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                         })
                         .flatMap(neumaticoRepository::save)
                         .flatMap(this::enrichNeumaticoWithRelations))
-                .doOnSubscribe(s -> log.debug("Iniciando actualización de neumático {}", id))
-                .doOnSuccess(result -> log.debug("Neumático {} actualizado exitosamente", id))
+                .doOnSubscribe(s -> log.info("Iniciando actualización de neumático {}", id))
+                .doOnSuccess(result -> log.info("Neumático {} actualizado exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar neumático {}: {}", id, error.getMessage()))
                 .onErrorResume(throwable -> {
                     if (throwable instanceof ValidationException || 
@@ -205,16 +207,16 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     }
 
     private Mono<Void> validatePosicionAvailability(Integer equipoId, Integer posicion) {
-        log.debug("Validando disponibilidad de posición {} en equipo {}", posicion, equipoId);
+        log.info("Validando disponibilidad de posición {} en equipo {}", posicion, equipoId);
         return neumaticoRepository.findByEquipoIdAndPosicion(equipoId, posicion)
-                .doOnNext(found -> log.debug("Encontrado neumático existente en posición: {}", found.getSerieCodigo()))
+                .doOnNext(found -> log.info("Encontrado neumático existente en posición: {}", found.getSerieCodigo()))
                 .flatMap(existingNeumatico -> {
                     log.warn("Posición {} del equipo {} ya está ocupada por neumático {}", 
                         posicion, equipoId, existingNeumatico.getSerieCodigo());
                     return Mono.<Void>error(
                         new PosicionAlreadyOccupiedException(equipoId, posicion, existingNeumatico.getSerieCodigo()));
                 })
-                .doOnSuccess(v -> log.debug("Posición {} en equipo {} está disponible", posicion, equipoId))
+                .doOnSuccess(v -> log.info("Posición {} en equipo {} está disponible", posicion, equipoId))
                 .then();
     }
 
@@ -247,13 +249,23 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 proveedorMono.subscribeOn(Schedulers.boundedElastic()),
                 disenoMono.subscribeOn(Schedulers.boundedElastic()),
                 clasificacionMono.subscribeOn(Schedulers.boundedElastic())
-        ).flatMap(tuple -> Mono.fromCallable(() -> mapEntityToResponse(
-                neumatico, 
-                tuple.getT1(), 
-                tuple.getT2(), 
-                tuple.getT3(), 
-                tuple.getT4()))
-                .subscribeOn(Schedulers.boundedElastic()));
+        ).flatMap(tuple -> {
+            // Calcular RTD thresholds usando el rtdOriginal del catálogo
+            Mono<RtdThresholdsResponse> rtdThresholdsMono = rtdThresholdService
+                    .calculateRtdThresholds(neumatico, tuple.getT1().getRtdOriginal())
+                    .subscribeOn(Schedulers.boundedElastic());
+            
+            return rtdThresholdsMono.flatMap(rtdThresholds -> 
+                Mono.fromCallable(() -> mapEntityToResponse(
+                        neumatico, 
+                        tuple.getT1(), 
+                        tuple.getT2(), 
+                        tuple.getT3(), 
+                        tuple.getT4(),
+                        rtdThresholds))
+                        .subscribeOn(Schedulers.boundedElastic())
+            );
+        });
     }
 
     private Neumatico mapRequestToEntity(NeumaticoRequest request) {
@@ -284,7 +296,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
             CatalogoNeumaticoResponse catalogoResponse,
             ProveedorResponse proveedorResponse,
             DisenoReencaucheResponse disenoResponse,
-            ClasificacionNeumaticoResponse clasificacionResponse) {
+            ClasificacionNeumaticoResponse clasificacionResponse,
+            RtdThresholdsResponse rtdThresholds) {
         
         return NeumaticoResponse.builder()
                 .id(entity.getId())
@@ -306,6 +319,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 .numeroReencauches(entity.getNumeroReencauches())
                 .disenoReencaucheResponse(disenoResponse.getId() != null ? disenoResponse : null)
                 .clasificacionNeumaticoResponse(clasificacionResponse.getId() != null ? clasificacionResponse : null)
+                .rtdThresholds(rtdThresholds)
                 .build();
     }
 }

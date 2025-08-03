@@ -50,4 +50,6 @@ public class NeumaticoResponse {
     private DisenoReencaucheResponse disenoReencaucheResponse;
 
     private ClasificacionNeumaticoResponse clasificacionNeumaticoResponse;
+
+    private RtdThresholdsResponse rtdThresholds;
 }
