@@ -1,11 +1,9 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.dto.RtdThresholdsResponse;
-import com.dliriotech.tms.tyreservice.entity.ConfiguracionEmpresaEquipo;
 import com.dliriotech.tms.tyreservice.entity.MovimientoNeumatico;
 import com.dliriotech.tms.tyreservice.entity.Neumatico;
-import com.dliriotech.tms.tyreservice.entity.TipoEquipo;
-import com.dliriotech.tms.tyreservice.repository.*;
+import com.dliriotech.tms.tyreservice.service.MasterDataCacheService;
 import com.dliriotech.tms.tyreservice.service.RtdThresholdService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +18,7 @@ import java.math.BigDecimal;
 @Slf4j
 public class RtdThresholdServiceImpl implements RtdThresholdService {
 
-    private final EquipoRepository equipoRepository;
-    private final ConfiguracionEmpresaEquipoRepository configuracionEmpresaEquipoRepository;
-    private final TipoEquipoRepository tipoEquipoRepository;
-    private final MovimientoNeumaticoRepository movimientoNeumaticoRepository;
+    private final MasterDataCacheService masterDataCacheService;
 
     @Override
     public Mono<RtdThresholdsResponse> calculateRtdThresholds(Neumatico neumatico, BigDecimal rtdOriginal) {
@@ -44,24 +39,20 @@ public class RtdThresholdServiceImpl implements RtdThresholdService {
     }
 
     /**
-     * Calcula el RTD mínimo usando la lógica de COALESCE:
+     * Calcula el RTD mínimo usando la lógica de COALESCE optimizada con cache:
      * 1. Busca configuración específica de empresa-tipo_equipo
      * 2. Si no existe, usa la configuración por defecto del tipo de equipo
      */
     private Mono<BigDecimal> calculateRtdMinimo(Neumatico neumatico) {
-        return equipoRepository.findById(neumatico.getEquipoId())
-                .flatMap(equipo -> 
-                    // Intentar obtener configuración específica de empresa-tipo_equipo
-                    configuracionEmpresaEquipoRepository
-                            .findByIdEmpresaAndIdTipoEquipo(equipo.getEmpresaId(), equipo.getTipoEquipoId())
-                            .map(ConfiguracionEmpresaEquipo::getRtdMinimoReencauche)
-                            .switchIfEmpty(
-                                // Si no hay configuración específica, usar la del tipo de equipo
-                                tipoEquipoRepository.findById(equipo.getTipoEquipoId())
-                                        .map(TipoEquipo::getRtadMinimoReencauche)
-                            )
-                )
-                .defaultIfEmpty(BigDecimal.ZERO)
+        log.debug("Calculando RTD mínimo con cache para neumático ID: {}, equipoId: {}", 
+                neumatico.getId(), neumatico.getEquipoId());
+        
+        // Usar el método optimizado del cache que combina todas las consultas
+        return masterDataCacheService.getRtdMinimo(neumatico.getEquipoId())
+                .doOnSuccess(result -> log.debug("RTD mínimo calculado para neumático {}: {}", 
+                        neumatico.getId(), result))
+                .doOnError(error -> log.error("Error calculando RTD mínimo para neumático {}: {}", 
+                        neumatico.getId(), error.getMessage()))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -73,22 +64,28 @@ public class RtdThresholdServiceImpl implements RtdThresholdService {
      *    - Usa el rtdOriginal del catálogo
      */
     private Mono<BigDecimal> calculateRtdMaximo(Neumatico neumatico, BigDecimal rtdOriginal) {
+        log.debug("Calculando RTD máximo para neumático ID: {}, numeroReencauches: {}, rtdOriginal: {}", 
+                neumatico.getId(), neumatico.getNumeroReencauches(), rtdOriginal);
+        
         if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
-            return findLatestReencaucheMovement(neumatico.getId())
+            log.debug("Neumático {} tiene {} reencauches, buscando último movimiento con cache", 
+                    neumatico.getId(), neumatico.getNumeroReencauches());
+            
+            return masterDataCacheService.getLatestReencaucheMovement(neumatico.getId())
+                    .doOnNext(movimiento -> log.debug("Encontrado movimiento de reencauche para neumático {}: " +
+                            "movimientoId={}, rtdPostReencauche={}, fechaMovimiento={}", 
+                            neumatico.getId(), movimiento.getId(), movimiento.getRtdPostReencauche(), 
+                            movimiento.getFechaMovimiento()))
                     .map(MovimientoNeumatico::getRtdPostReencauche)
-                    .defaultIfEmpty(rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO);
+                    .defaultIfEmpty(rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO)
+                    .doOnSuccess(result -> log.debug("RTD máximo calculado para neumático {}: {}", 
+                            neumatico.getId(), result));
         } else {
-            return Mono.just(rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO);
+            log.debug("Neumático {} no tiene reencauches, usando RTD original: {}", 
+                    neumatico.getId(), rtdOriginal);
+            return Mono.just(rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO)
+                    .doOnSuccess(result -> log.debug("RTD máximo (original) para neumático {}: {}", 
+                            neumatico.getId(), result));
         }
-    }
-
-    /**
-     * Busca el último movimiento de reencauche para un neumático específico.
-     * Filtra por tipo de movimiento 4 (reencauche) y selecciona el de mayor ID.
-     */
-    private Mono<com.dliriotech.tms.tyreservice.entity.MovimientoNeumatico> findLatestReencaucheMovement(Integer neumaticoId) {
-        return movimientoNeumaticoRepository
-                .findTopByIdNeumaticoAndIdTipoMovimientoOrderByIdDesc(neumaticoId, 4)
-                .subscribeOn(Schedulers.boundedElastic());
     }
 }
