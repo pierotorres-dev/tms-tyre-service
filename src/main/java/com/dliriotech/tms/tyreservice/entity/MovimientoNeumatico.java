@@ -17,37 +17,64 @@ import java.math.BigDecimal;
 @Builder
 @Table("movimientos_neumaticos")
 public class MovimientoNeumatico {
-    
+
     @Id
     private Integer id;
-    
-    @Column("id_tipo_movimiento")
-    private Integer idTipoMovimiento;
-    
+
     @Column("id_neumatico")
     private Integer idNeumatico;
-    
-    @Column("id_equipo")
-    private Integer idEquipo;
-    
-    @Column("posicion_origen")
-    private Integer posicionOrigen;
-    
-    @Column("posicion_destino")
-    private Integer posicionDestino;
-    
+
     @Column("fecha_movimiento")
     private LocalDateTime fechaMovimiento;
-    
-    @Column("kilometraje_equipo")
-    private BigDecimal kilometrajeEquipo;
-    
-    @Column("observaciones")
-    private String observaciones;
-    
+
+    @Column("id_equipo_origen")
+    private Integer idEquipoOrigen;
+
+    @Column("posicion_origen")
+    private Integer posicionOrigen;
+
+    @Column("id_equipo_destino")
+    private Integer idEquipoDestino;
+
+    @Column("posicion_destino")
+    private Integer posicionDestino;
+
+    @Column("id_clasificacion_origen")
+    private Integer idClasificacionOrigen;
+
+    @Column("id_clasificacion_destino")
+    private Integer idClasificacionDestino;
+
+    @Column("id_tipo_movimiento")
+    private Integer idTipoMovimiento;
+
+    @Column("kilometraje")
+    private Integer kilometraje;
+
+    @Column("rtd1")
+    private BigDecimal rtd1;
+
+    @Column("rtd2")
+    private BigDecimal rtd2;
+
+    @Column("rtd3")
+    private BigDecimal rtd3;
+
+    @Column("rtd_actual")
+    private BigDecimal rtdActual;
+
+    @Column("rtd_post_reencauche")
+    private BigDecimal rtdPostReencauche;
+
     @Column("id_usuario")
     private Integer idUsuario;
-    
-    @Column("activo")
-    private Integer activo;
+
+    @Column("costo_movimiento")
+    private BigDecimal costoMovimiento;
+
+    @Column("proveedor_servicio")
+    private String proveedorServicio;
+
+    @Column("comentario")
+    private String comentario;
 }

@@ -26,9 +26,9 @@ public class ConfiguracionEmpresaEquipo {
     @Column("id_tipo_equipo")
     private Integer idTipoEquipo;
     
-    @Column("umbral_km_inspeccion")
-    private BigDecimal umbralKmInspeccion;
+    @Column("rtd_minimo_reencauche")
+    private BigDecimal rtdMinimoReencauche;
     
-    @Column("umbral_km_rotacion")
-    private BigDecimal umbralKmRotacion;
+    @Column("rtd_minimo_scrap")
+    private BigDecimal rtdMinimoScrap;
 }

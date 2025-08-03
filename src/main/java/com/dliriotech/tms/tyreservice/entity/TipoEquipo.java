@@ -24,9 +24,9 @@ public class TipoEquipo {
     
     private String descripcion;
     
-    @Column("umbral_km_inspeccion")
-    private BigDecimal umbralKmInspeccion;
+    @Column("rtd_minimo_reencauche")
+    private BigDecimal rtadMinimoReencauche;
     
-    @Column("umbral_km_rotacion")
-    private BigDecimal umbralKmRotacion;
+    @Column("rtd_minimo_scrap")
+    private BigDecimal rtadMinimoScrap;
 }
