@@ -11,12 +11,5 @@ import reactor.core.publisher.Mono;
  */
 public interface RtdThresholdService {
     
-    /**
-     * Calcula los umbrales RTD para un neumático específico.
-     * 
-     * @param neumatico El neumático para el cual calcular los umbrales
-     * @param rtdOriginal El RTD original del catálogo del neumático
-     * @return Mono que emite los umbrales RTD calculados
-     */
     Mono<RtdThresholdsResponse> calculateRtdThresholds(Neumatico neumatico, java.math.BigDecimal rtdOriginal);
 }
