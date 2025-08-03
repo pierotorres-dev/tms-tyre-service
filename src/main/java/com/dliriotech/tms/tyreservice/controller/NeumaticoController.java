@@ -2,7 +2,9 @@ package com.dliriotech.tms.tyreservice.controller;
 
 import com.dliriotech.tms.tyreservice.dto.NeumaticoRequest;
 import com.dliriotech.tms.tyreservice.dto.NeumaticoResponse;
+import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
+import com.dliriotech.tms.tyreservice.service.ObservacionNeumaticoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import reactor.core.publisher.Mono;
 public class NeumaticoController {
 
     private final NeumaticoService neumaticoService;
+    private final ObservacionNeumaticoService observacionNeumaticoService;
 
     @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(@PathVariable Integer equipoId) {
@@ -33,5 +36,12 @@ public class NeumaticoController {
     public Mono<NeumaticoResponse> updateNeumatico(@PathVariable Integer id, 
                                                    @Valid @RequestBody NeumaticoRequest request) {
         return neumaticoService.updateNeumatico(id, request);
+    }
+
+    @GetMapping(value = "/{neumaticoId}/observaciones/solucionables", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<ObservacionNeumaticoResponse> getObservacionesSolucionables(
+            @PathVariable Integer neumaticoId,
+            @RequestParam Integer tipoMovimientoId) {
+        return observacionNeumaticoService.getAllObservacionesByNeumaticoIdAndTipoMovimientoId(neumaticoId, tipoMovimientoId);
     }
 }

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class EstadoObservacionResponse {
     private Integer id;
 
-    private Integer nombre;
+    private String nombre;
 
-    private Integer descripcion;
+    private String descripcion;
 }

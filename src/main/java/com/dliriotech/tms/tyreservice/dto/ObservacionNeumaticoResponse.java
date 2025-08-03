@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,10 +27,12 @@ public class ObservacionNeumaticoResponse {
 
     private EstadoObservacionResponse estadoObservacionResponse;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaCreacion;
 
     private Integer idUsuarioCreacion;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaResolucion;
 
     private Integer idUsuarioResolucion;

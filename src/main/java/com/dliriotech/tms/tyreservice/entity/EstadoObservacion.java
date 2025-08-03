@@ -16,7 +16,7 @@ public class EstadoObservacion {
     @Id
     private Integer id;
 
-    private Integer nombre;
+    private String nombre;
 
-    private Integer descripcion;
+    private String descripcion;
 }

@@ -4,5 +4,5 @@ import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
 import reactor.core.publisher.Flux;
 
 public interface ObservacionNeumaticoService {
-    Flux<ObservacionNeumaticoResponse> getAllObservacionesByNeumaticoIdAndTipoMovimientoId(Integer neumaticoId);
+    Flux<ObservacionNeumaticoResponse> getAllObservacionesByNeumaticoIdAndTipoMovimientoId(Integer neumaticoId, Integer tipoMovimientoId);
 }
