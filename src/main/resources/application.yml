@@ -81,17 +81,6 @@ app:
       clasificacion-neumatico: "cache:clasificacionNeumatico"
       marca-neumatico: "cache:marcaNeumatico"
       medida-neumatico: "cache:medidaNeumatico"
-      # Nuevos prefijos para datos maestros
-      equipo: "cache:equipo"
-      configuracion-empresa: "cache:config"
-      tipo-equipo: "cache:tipoEquipo"
-      movimiento: "cache:movement"
-      rtd-minimo: "cache:rtdMinimo"
-    ttl:
-      # TTL específicos por tipo de dato
-      equipo-hours: 24          # Datos semi-estáticos
-      master-data-hours: 24    # Datos maestros (configuraciones, tipos)
-      movement-hours: 1        # Datos operacionales
 
 server:
   port: 8083
