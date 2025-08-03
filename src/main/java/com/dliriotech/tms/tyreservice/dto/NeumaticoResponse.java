@@ -43,6 +43,8 @@ public class NeumaticoResponse {
 
     private Integer kmAcumulados;
 
+    private Integer kmCicloActual;
+
     private Integer numeroReencauches;
 
     private DisenoReencaucheResponse disenoReencaucheResponse;

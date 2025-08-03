@@ -58,6 +58,9 @@ public class Neumatico {
     @Column("km_acumulados")
     private Integer kmAcumulados;
 
+    @Column("km_ciclo_actual")
+    private Integer kmCicloActual;
+
     @Column("numero_reencauches")
     private Integer numeroReencauches;
 

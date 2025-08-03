@@ -75,6 +75,10 @@ public class NeumaticoRequest {
     @PositiveOrZero(message = "Los kilómetros acumulados deben ser positivos o cero")
     private Integer kmAcumulados;
 
+    @NotNull(message = "Los kilómetros acumulados son obligatorios")
+    @PositiveOrZero(message = "Los kilómetros del ciclo actual deben ser positivos o cero")
+    private Integer kmCicloActual;
+
     @NotNull(message = "El número de reencauches es obligatorio")
     @Min(value = 0, message = "El número de reencauches debe ser mayor o igual a 0")
     @Max(value = 10, message = "El número de reencauches no puede ser mayor a 10")
