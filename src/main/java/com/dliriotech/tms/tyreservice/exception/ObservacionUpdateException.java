@@ -32,12 +32,12 @@ public class ObservacionUpdateException extends BaseException {
     
     public static ObservacionUpdateException alreadyResolved(Integer observacionId) {
         return new ObservacionUpdateException(
-            String.format("No se puede actualizar: observación con ID %d ya está resuelta", observacionId));
+            String.format("No se puede actualizar: la observación %d ya está en estado final (Resuelto/Cancelado)", observacionId));
     }
     
     public static ObservacionUpdateException invalidStateTransition(String fromState, String toState) {
         return new ObservacionUpdateException(
-            String.format("Transición de estado inválida: de '%s' a '%s'", fromState, toState));
+            String.format("Transición de estado no permitida: de '%s' a '%s'. Solo se permite cambiar desde 'Pendiente' a 'Resuelto' o 'Cancelado'", fromState, toState));
     }
     
     public static ObservacionUpdateException databaseError(String operation, Throwable cause) {

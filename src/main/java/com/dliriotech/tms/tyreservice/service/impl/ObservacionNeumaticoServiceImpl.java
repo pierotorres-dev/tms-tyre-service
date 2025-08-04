@@ -135,8 +135,10 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         return Mono.fromCallable(() -> validateUpdateRequest(id, request))
                 .subscribeOn(Schedulers.boundedElastic())
                 // Buscar la observación existente
-                .then(observacionNeumaticoRepository.findById(id)
-                    .switchIfEmpty(Mono.error(ObservacionUpdateException.notFound(id))))
+                .flatMap(validatedRequest -> 
+                    observacionNeumaticoRepository.findById(id)
+                        .switchIfEmpty(Mono.error(ObservacionUpdateException.notFound(id)))
+                )
                 // Validar que el nuevo estado existe (si se está actualizando)
                 .flatMap(existingObservacion -> {
                     if (request.getIdEstadoObservacion() != null) {
@@ -148,8 +150,9 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 })
                 // Validar reglas de negocio y aplicar cambios
                 .flatMap(existingObservacion ->
-                    Mono.fromCallable(() -> applyUpdates(existingObservacion, request))
-                        .subscribeOn(Schedulers.boundedElastic())
+                    validateBusinessRules(existingObservacion, request)
+                        .then(Mono.fromCallable(() -> applyUpdates(existingObservacion, request))
+                            .subscribeOn(Schedulers.boundedElastic()))
                 )
                 // Guardar los cambios
                 .flatMap(updatedObservacion ->
@@ -192,13 +195,17 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         if (request.getIdEstadoObservacion() != null) {
             builder.idEstadoObservacion(request.getIdEstadoObservacion());
             
-            // Si se está resolviendo la observación (cambiando de pendiente a resuelto)
+            // Si se está cambiando a un estado diferente al actual
             if (!request.getIdEstadoObservacion().equals(existing.getIdEstadoObservacion())) {
+                // Marcar fecha de resolución automáticamente
                 builder.fechaResolucion(LocalDateTime.now(ZoneId.of("America/Lima")));
                 
-                // Si se proporciona usuario de resolución, usarlo; sino mantener el existente
+                // Si se proporciona usuario de resolución, usarlo; sino es requerido para estados finales
                 if (request.getIdUsuarioResolucion() != null) {
                     builder.idUsuarioResolucion(request.getIdUsuarioResolucion());
+                } else if (existing.getIdUsuarioResolucion() == null) {
+                    // Si no hay usuario de resolución previo y no se proporciona uno, usar el usuario de creación como fallback
+                    builder.idUsuarioResolucion(existing.getIdUsuarioCreacion());
                 }
             }
         } else if (request.getIdUsuarioResolucion() != null) {
@@ -212,6 +219,64 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         }
         
         return builder.build();
+    }
+    
+    private Mono<Void> validateBusinessRules(ObservacionNeumatico existing, ObservacionNeumaticoUpdateRequest request) {
+        return observacionMasterDataCacheService.getEstadoObservacion(existing.getIdEstadoObservacion())
+                .flatMap(currentState -> {
+                    String currentStateName = currentState.getNombre();
+                    
+                    // Validar que no se puede actualizar una observación ya resuelta o cancelada
+                    if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.alreadyResolved(existing.getId()));
+                    }
+                    
+                    if (EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.invalidStateTransition(
+                            currentStateName, "cualquier estado"));
+                    }
+                    
+                    // Si se está cambiando el estado, validar transiciones válidas
+                    if (request.getIdEstadoObservacion() != null && 
+                        !request.getIdEstadoObservacion().equals(existing.getIdEstadoObservacion())) {
+                        
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getIdEstadoObservacion())
+                                .flatMap(newState -> {
+                                    String newStateName = newState.getNombre();
+                                    
+                                    // Validar transiciones específicas según reglas de negocio
+                                    if (EstadoObservacionConstants.PENDIENTE.equalsIgnoreCase(currentStateName)) {
+                                        // Desde Pendiente se puede ir a Resuelto o Cancelado
+                                        if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(newStateName) ||
+                                            EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(newStateName)) {
+                                            return Mono.<Void>empty();
+                                        } else {
+                                            return Mono.error(ObservacionUpdateException.invalidStateTransition(
+                                                currentStateName, newStateName));
+                                        }
+                                    } else {
+                                        // Desde cualquier otro estado no se permite cambiar
+                                        return Mono.error(ObservacionUpdateException.invalidStateTransition(
+                                            currentStateName, newStateName));
+                                    }
+                                })
+                                .onErrorMap(error -> {
+                                    if (error instanceof ObservacionUpdateException) {
+                                        return error;
+                                    }
+                                    return ObservacionUpdateException.estadoNotFound(request.getIdEstadoObservacion());
+                                });
+                    }
+                    
+                    // Si no se está cambiando el estado, permitir la actualización
+                    return Mono.<Void>empty();
+                })
+                .onErrorMap(error -> {
+                    if (error instanceof ObservacionUpdateException) {
+                        return error;
+                    }
+                    return ObservacionMasterDataException.cacheError("validar reglas de negocio", error);
+                });
     }
 
     private ObservacionNeumaticoNuevoRequest validateObservacionRequest(ObservacionNeumaticoNuevoRequest request) {
