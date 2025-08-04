@@ -1,15 +1,13 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.constants.EstadoObservacionConstants;
-import com.dliriotech.tms.tyreservice.dto.EstadoObservacionResponse;
-import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoNuevoRequest;
-import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
-import com.dliriotech.tms.tyreservice.dto.TipoObservacionResponse;
+import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
 import com.dliriotech.tms.tyreservice.exception.ObservacionCreationException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionMasterDataException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionNotFoundException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionProcessingException;
+import com.dliriotech.tms.tyreservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.tyreservice.repository.MapaObservacionSolucionRepository;
 import com.dliriotech.tms.tyreservice.repository.ObservacionNeumaticoRepository;
 import com.dliriotech.tms.tyreservice.service.ObservacionMasterDataCacheService;
@@ -128,7 +126,94 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 .doOnError(error -> log.error("Error al crear observación para neumático {}: {}", 
                     observacionNeumaticoNuevoRequest.getIdNeumatico(), error.getMessage()));
     }
+
+    @Override
+    public Mono<ObservacionNeumaticoResponse> updateObservacion(Integer id, ObservacionNeumaticoUpdateRequest request) {
+        log.info("Actualizando observación con ID: {}", id);
+        
+        // Validaciones de entrada
+        return Mono.fromCallable(() -> validateUpdateRequest(id, request))
+                .subscribeOn(Schedulers.boundedElastic())
+                // Buscar la observación existente
+                .then(observacionNeumaticoRepository.findById(id)
+                    .switchIfEmpty(Mono.error(ObservacionUpdateException.notFound(id))))
+                // Validar que el nuevo estado existe (si se está actualizando)
+                .flatMap(existingObservacion -> {
+                    if (request.getIdEstadoObservacion() != null) {
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getIdEstadoObservacion())
+                            .onErrorMap(error -> ObservacionUpdateException.estadoNotFound(request.getIdEstadoObservacion()))
+                            .map(estadoResponse -> existingObservacion);
+                    }
+                    return Mono.just(existingObservacion);
+                })
+                // Validar reglas de negocio y aplicar cambios
+                .flatMap(existingObservacion ->
+                    Mono.fromCallable(() -> applyUpdates(existingObservacion, request))
+                        .subscribeOn(Schedulers.boundedElastic())
+                )
+                // Guardar los cambios
+                .flatMap(updatedObservacion ->
+                    observacionNeumaticoRepository.save(updatedObservacion)
+                        .onErrorMap(error -> ObservacionUpdateException.databaseError("actualizar observación", error))
+                )
+                // Enriquecer con relaciones y devolver response
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnSuccess(response -> log.info("Observación actualizada exitosamente con ID: {}", response.getId()))
+                .doOnError(error -> log.error("Error al actualizar observación con ID {}: {}", id, error.getMessage()));
+    }
     
+    private ObservacionNeumaticoUpdateRequest validateUpdateRequest(Integer id, ObservacionNeumaticoUpdateRequest request) {
+        if (id == null || id <= 0) {
+            throw ObservacionUpdateException.invalidRequest("id", id);
+        }
+        if (request == null) {
+            throw ObservacionUpdateException.invalidRequest("request", "null");
+        }
+        // Validar que al menos un campo está presente para actualizar
+        if (request.getIdEstadoObservacion() == null && 
+            request.getIdUsuarioResolucion() == null && 
+            (request.getComentarioResolucion() == null || request.getComentarioResolucion().trim().isEmpty())) {
+            throw ObservacionUpdateException.invalidRequest("request", "no hay campos para actualizar");
+        }
+        // Validar campos específicos si están presentes
+        if (request.getIdEstadoObservacion() != null && request.getIdEstadoObservacion() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("idEstadoObservacion", request.getIdEstadoObservacion());
+        }
+        if (request.getIdUsuarioResolucion() != null && request.getIdUsuarioResolucion() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("idUsuarioResolucion", request.getIdUsuarioResolucion());
+        }
+        return request;
+    }
+    
+    private ObservacionNeumatico applyUpdates(ObservacionNeumatico existing, ObservacionNeumaticoUpdateRequest request) {
+        ObservacionNeumatico.ObservacionNeumaticoBuilder builder = existing.toBuilder();
+        
+        // Si se está cambiando el estado de observación
+        if (request.getIdEstadoObservacion() != null) {
+            builder.idEstadoObservacion(request.getIdEstadoObservacion());
+            
+            // Si se está resolviendo la observación (cambiando de pendiente a resuelto)
+            if (!request.getIdEstadoObservacion().equals(existing.getIdEstadoObservacion())) {
+                builder.fechaResolucion(LocalDateTime.now(ZoneId.of("America/Lima")));
+                
+                // Si se proporciona usuario de resolución, usarlo; sino mantener el existente
+                if (request.getIdUsuarioResolucion() != null) {
+                    builder.idUsuarioResolucion(request.getIdUsuarioResolucion());
+                }
+            }
+        } else if (request.getIdUsuarioResolucion() != null) {
+            // Si solo se está actualizando el usuario de resolución sin cambiar estado
+            builder.idUsuarioResolucion(request.getIdUsuarioResolucion());
+        }
+        
+        // Actualizar comentario de resolución si se proporciona
+        if (request.getComentarioResolucion() != null) {
+            builder.comentarioResolucion(request.getComentarioResolucion().trim());
+        }
+        
+        return builder.build();
+    }
+
     private ObservacionNeumaticoNuevoRequest validateObservacionRequest(ObservacionNeumaticoNuevoRequest request) {
         if (request == null) {
             throw ObservacionCreationException.invalidRequest("request", "null");

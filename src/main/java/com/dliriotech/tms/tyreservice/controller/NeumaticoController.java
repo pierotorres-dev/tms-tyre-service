@@ -1,9 +1,6 @@
 package com.dliriotech.tms.tyreservice.controller;
 
-import com.dliriotech.tms.tyreservice.dto.NeumaticoRequest;
-import com.dliriotech.tms.tyreservice.dto.NeumaticoResponse;
-import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoNuevoRequest;
-import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
+import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
 import com.dliriotech.tms.tyreservice.service.ObservacionNeumaticoService;
 import jakarta.validation.Valid;
@@ -61,5 +58,12 @@ public class NeumaticoController {
     public Mono<ObservacionNeumaticoResponse> createObservacion(
             @Valid @RequestBody ObservacionNeumaticoNuevoRequest request) {
         return observacionNeumaticoService.saveObservacion(request);
+    }
+
+    @PatchMapping(value = "/observaciones/{observacionId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ObservacionNeumaticoResponse> updateObservacion(
+            @PathVariable Integer observacionId,
+            @Valid @RequestBody ObservacionNeumaticoUpdateRequest request) {
+        return observacionNeumaticoService.updateObservacion(observacionId, request);
     }
 }
