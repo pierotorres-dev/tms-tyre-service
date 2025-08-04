@@ -10,5 +10,5 @@ public interface MovimientoNeumaticoRepository extends ReactiveCrudRepository<Mo
      * Busca el último movimiento de un neumático específico por tipo de movimiento.
      * Utilizado para obtener el RTD post-reencauche más reciente.
      */
-    Mono<MovimientoNeumatico> findTopByIdNeumaticoAndIdTipoMovimientoOrderByIdDesc(Integer idNeumatico, Integer idTipoMovimiento);
+    Mono<MovimientoNeumatico> findTopByNeumaticoIdAndTipoMovimientoIdOrderByIdDesc(Integer neumaticoId, Integer tipoMovimientoId);
 }

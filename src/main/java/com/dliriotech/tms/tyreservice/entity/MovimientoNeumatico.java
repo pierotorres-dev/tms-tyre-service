@@ -22,31 +22,31 @@ public class MovimientoNeumatico {
     private Integer id;
 
     @Column("id_neumatico")
-    private Integer idNeumatico;
+    private Integer neumaticoId;
 
     @Column("fecha_movimiento")
     private LocalDateTime fechaMovimiento;
 
     @Column("id_equipo_origen")
-    private Integer idEquipoOrigen;
+    private Integer equipoOrigenId;
 
     @Column("posicion_origen")
     private Integer posicionOrigen;
 
     @Column("id_equipo_destino")
-    private Integer idEquipoDestino;
+    private Integer equipoDestinoId;
 
     @Column("posicion_destino")
     private Integer posicionDestino;
 
     @Column("id_clasificacion_origen")
-    private Integer idClasificacionOrigen;
+    private Integer clasificacionOrigenId;
 
     @Column("id_clasificacion_destino")
-    private Integer idClasificacionDestino;
+    private Integer clasificacionDestinoId;
 
     @Column("id_tipo_movimiento")
-    private Integer idTipoMovimiento;
+    private Integer tipoMovimientoId;
 
     @Column("kilometraje")
     private Integer kilometraje;
@@ -67,7 +67,7 @@ public class MovimientoNeumatico {
     private BigDecimal rtdPostReencauche;
 
     @Column("id_usuario")
-    private Integer idUsuario;
+    private Integer usuarioId;
 
     @Column("costo_movimiento")
     private BigDecimal costoMovimiento;

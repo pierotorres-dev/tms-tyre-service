@@ -10,5 +10,5 @@ public interface ConfiguracionEmpresaEquipoRepository extends ReactiveCrudReposi
      * Busca configuración específica por empresa y tipo de equipo.
      * Usado para obtener umbrales RTD específicos de una empresa.
      */
-    Mono<ConfiguracionEmpresaEquipo> findByIdEmpresaAndIdTipoEquipo(Integer idEmpresa, Integer idTipoEquipo);
+    Mono<ConfiguracionEmpresaEquipo> findByEmpresaIdAndTipoEquipoId(Integer empresaId, Integer tipoEquipoId);
 }

@@ -15,9 +15,9 @@ import java.time.LocalDateTime;
 public class ObservacionNeumaticoResponse {
     private Integer id;
 
-    private Integer idNeumatico;
+    private Integer neumaticoId;
 
-    private Integer idEquipo;
+    private Integer equipoId;
 
     private Integer posicion;
 
@@ -30,12 +30,12 @@ public class ObservacionNeumaticoResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaCreacion;
 
-    private Integer idUsuarioCreacion;
+    private Integer usuarioCreacionId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaResolucion;
 
-    private Integer idUsuarioResolucion;
+    private Integer usuarioResolucionId;
 
     private String comentarioResolucion;
 }

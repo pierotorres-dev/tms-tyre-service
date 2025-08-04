@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ObservacionNeumaticoUpdateRequest {
-    private Integer idEstadoObservacion;
+    private Integer estadoObservacionId;
 
-    private Integer idUsuarioResolucion;
+    private Integer usuarioResolucionId;
 
     private String comentarioResolucion;
 }

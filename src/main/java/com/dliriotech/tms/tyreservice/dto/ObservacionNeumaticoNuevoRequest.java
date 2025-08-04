@@ -10,15 +10,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ObservacionNeumaticoNuevoRequest {
-    private Integer idNeumatico;
+    private Integer neumaticoId;
 
-    private Integer idEquipo;
+    private Integer equipoId;
 
     private Integer posicion;
 
-    private Integer idTipoObservacion;
+    private Integer tipoObservacionId;
 
     private String descripcion;
 
-    private Integer idUsuarioCreacion;
+    private Integer usuarioCreacionId;
 }

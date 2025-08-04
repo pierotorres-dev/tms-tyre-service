@@ -101,7 +101,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
     @Override
     public Mono<ObservacionNeumaticoResponse> saveObservacion(ObservacionNeumaticoNuevoRequest observacionNeumaticoNuevoRequest) {
-        log.info("Creando nueva observación para neumático {}", observacionNeumaticoNuevoRequest.getIdNeumatico());
+        log.info("Creando nueva observación para neumático {}", observacionNeumaticoNuevoRequest.getNeumaticoId());
         
         // Validaciones de entrada
         return Mono.fromCallable(() -> validateObservacionRequest(observacionNeumaticoNuevoRequest))
@@ -109,8 +109,8 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 .then(observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
                     .onErrorMap(error -> ObservacionMasterDataException.estadoNotFound(EstadoObservacionConstants.PENDIENTE)))
                 .flatMap(estadoPendienteId -> 
-                    observacionMasterDataCacheService.getTipoObservacion(observacionNeumaticoNuevoRequest.getIdTipoObservacion())
-                        .onErrorMap(error -> ObservacionCreationException.tipoObservacionNotFound(observacionNeumaticoNuevoRequest.getIdTipoObservacion()))
+                    observacionMasterDataCacheService.getTipoObservacion(observacionNeumaticoNuevoRequest.getTipoObservacionId())
+                        .onErrorMap(error -> ObservacionCreationException.tipoObservacionNotFound(observacionNeumaticoNuevoRequest.getTipoObservacionId()))
                         .map(tipoObservacion -> estadoPendienteId)
                 )
                 .flatMap(estadoPendienteId ->
@@ -124,7 +124,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnSuccess(response -> log.info("Observación creada exitosamente con ID: {}", response.getId()))
                 .doOnError(error -> log.error("Error al crear observación para neumático {}: {}", 
-                    observacionNeumaticoNuevoRequest.getIdNeumatico(), error.getMessage()));
+                    observacionNeumaticoNuevoRequest.getNeumaticoId(), error.getMessage()));
     }
 
     @Override
@@ -141,9 +141,9 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 )
                 // Validar que el nuevo estado existe (si se está actualizando)
                 .flatMap(existingObservacion -> {
-                    if (request.getIdEstadoObservacion() != null) {
-                        return observacionMasterDataCacheService.getEstadoObservacion(request.getIdEstadoObservacion())
-                            .onErrorMap(error -> ObservacionUpdateException.estadoNotFound(request.getIdEstadoObservacion()))
+                    if (request.getEstadoObservacionId() != null) {
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getEstadoObservacionId())
+                            .onErrorMap(error -> ObservacionUpdateException.estadoNotFound(request.getEstadoObservacionId()))
                             .map(estadoResponse -> existingObservacion);
                     }
                     return Mono.just(existingObservacion);
@@ -173,17 +173,17 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionUpdateException.invalidRequest("request", "null");
         }
         // Validar que al menos un campo está presente para actualizar
-        if (request.getIdEstadoObservacion() == null && 
-            request.getIdUsuarioResolucion() == null && 
+        if (request.getEstadoObservacionId() == null && 
+            request.getUsuarioResolucionId() == null && 
             (request.getComentarioResolucion() == null || request.getComentarioResolucion().trim().isEmpty())) {
             throw ObservacionUpdateException.invalidRequest("request", "no hay campos para actualizar");
         }
         // Validar campos específicos si están presentes
-        if (request.getIdEstadoObservacion() != null && request.getIdEstadoObservacion() <= 0) {
-            throw ObservacionUpdateException.invalidRequest("idEstadoObservacion", request.getIdEstadoObservacion());
+        if (request.getEstadoObservacionId() != null && request.getEstadoObservacionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("estadoObservacionId", request.getEstadoObservacionId());
         }
-        if (request.getIdUsuarioResolucion() != null && request.getIdUsuarioResolucion() <= 0) {
-            throw ObservacionUpdateException.invalidRequest("idUsuarioResolucion", request.getIdUsuarioResolucion());
+        if (request.getUsuarioResolucionId() != null && request.getUsuarioResolucionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("usuarioResolucionId", request.getUsuarioResolucionId());
         }
         return request;
     }
@@ -192,25 +192,25 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         ObservacionNeumatico.ObservacionNeumaticoBuilder builder = existing.toBuilder();
         
         // Si se está cambiando el estado de observación
-        if (request.getIdEstadoObservacion() != null) {
-            builder.idEstadoObservacion(request.getIdEstadoObservacion());
+        if (request.getEstadoObservacionId() != null) {
+            builder.estadoObservacionId(request.getEstadoObservacionId());
             
             // Si se está cambiando a un estado diferente al actual
-            if (!request.getIdEstadoObservacion().equals(existing.getIdEstadoObservacion())) {
+            if (!request.getEstadoObservacionId().equals(existing.getEstadoObservacionId())) {
                 // Marcar fecha de resolución automáticamente
                 builder.fechaResolucion(LocalDateTime.now(ZoneId.of("America/Lima")));
                 
                 // Si se proporciona usuario de resolución, usarlo; sino es requerido para estados finales
-                if (request.getIdUsuarioResolucion() != null) {
-                    builder.idUsuarioResolucion(request.getIdUsuarioResolucion());
-                } else if (existing.getIdUsuarioResolucion() == null) {
+                if (request.getUsuarioResolucionId() != null) {
+                    builder.usuarioResolucionId(request.getUsuarioResolucionId());
+                } else if (existing.getUsuarioResolucionId() == null) {
                     // Si no hay usuario de resolución previo y no se proporciona uno, usar el usuario de creación como fallback
-                    builder.idUsuarioResolucion(existing.getIdUsuarioCreacion());
+                    builder.usuarioResolucionId(existing.getUsuarioCreacionId());
                 }
             }
-        } else if (request.getIdUsuarioResolucion() != null) {
+        } else if (request.getUsuarioResolucionId() != null) {
             // Si solo se está actualizando el usuario de resolución sin cambiar estado
-            builder.idUsuarioResolucion(request.getIdUsuarioResolucion());
+            builder.usuarioResolucionId(request.getUsuarioResolucionId());
         }
         
         // Actualizar comentario de resolución si se proporciona
@@ -222,7 +222,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
     }
     
     private Mono<Void> validateBusinessRules(ObservacionNeumatico existing, ObservacionNeumaticoUpdateRequest request) {
-        return observacionMasterDataCacheService.getEstadoObservacion(existing.getIdEstadoObservacion())
+        return observacionMasterDataCacheService.getEstadoObservacion(existing.getEstadoObservacionId())
                 .flatMap(currentState -> {
                     String currentStateName = currentState.getNombre();
                     
@@ -237,10 +237,10 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                     }
                     
                     // Si se está cambiando el estado, validar transiciones válidas
-                    if (request.getIdEstadoObservacion() != null && 
-                        !request.getIdEstadoObservacion().equals(existing.getIdEstadoObservacion())) {
+                    if (request.getEstadoObservacionId() != null && 
+                        !request.getEstadoObservacionId().equals(existing.getEstadoObservacionId())) {
                         
-                        return observacionMasterDataCacheService.getEstadoObservacion(request.getIdEstadoObservacion())
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getEstadoObservacionId())
                                 .flatMap(newState -> {
                                     String newStateName = newState.getNombre();
                                     
@@ -264,7 +264,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                                     if (error instanceof ObservacionUpdateException) {
                                         return error;
                                     }
-                                    return ObservacionUpdateException.estadoNotFound(request.getIdEstadoObservacion());
+                                    return ObservacionUpdateException.estadoNotFound(request.getEstadoObservacionId());
                                 });
                     }
                     
@@ -283,40 +283,40 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         if (request == null) {
             throw ObservacionCreationException.invalidRequest("request", "null");
         }
-        if (request.getIdNeumatico() == null || request.getIdNeumatico() <= 0) {
-            throw ObservacionCreationException.invalidRequest("idNeumatico", request.getIdNeumatico());
+        if (request.getNeumaticoId() == null || request.getNeumaticoId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("neumaticoId", request.getNeumaticoId());
         }
-        if (request.getIdEquipo() == null || request.getIdEquipo() <= 0) {
-            throw ObservacionCreationException.invalidRequest("idEquipo", request.getIdEquipo());
+        if (request.getEquipoId() == null || request.getEquipoId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("equipoId", request.getEquipoId());
         }
         if (request.getPosicion() == null || request.getPosicion() <= 0) {
             throw ObservacionCreationException.invalidRequest("posicion", request.getPosicion());
         }
-        if (request.getIdTipoObservacion() == null || request.getIdTipoObservacion() <= 0) {
-            throw ObservacionCreationException.invalidRequest("idTipoObservacion", request.getIdTipoObservacion());
+        if (request.getTipoObservacionId() == null || request.getTipoObservacionId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("tipoObservacionId", request.getTipoObservacionId());
         }
         if (request.getDescripcion() == null || request.getDescripcion().trim().isEmpty()) {
             throw ObservacionCreationException.invalidRequest("descripcion", request.getDescripcion());
         }
-        if (request.getIdUsuarioCreacion() == null || request.getIdUsuarioCreacion() <= 0) {
-            throw ObservacionCreationException.invalidRequest("idUsuarioCreacion", request.getIdUsuarioCreacion());
+        if (request.getUsuarioCreacionId() == null || request.getUsuarioCreacionId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("usuarioCreacionId", request.getUsuarioCreacionId());
         }
         return request;
     }
     
     private ObservacionNeumatico buildObservacionEntity(ObservacionNeumaticoNuevoRequest request, Integer estadoPendienteId) {
         return ObservacionNeumatico.builder()
-                .idNeumatico(request.getIdNeumatico())
-                .idEquipo(request.getIdEquipo())
+                .neumaticoId(request.getNeumaticoId())
+                .equipoId(request.getEquipoId())
                 .posicion(request.getPosicion())
-                .idTipoObservacion(request.getIdTipoObservacion())
+                .tipoObservacionId(request.getTipoObservacionId())
                 .descripcion(request.getDescripcion().trim())
-                .idEstadoObservacion(estadoPendienteId)
+                .estadoObservacionId(estadoPendienteId)
                 .fechaCreacion(LocalDateTime.now(ZoneId.of("America/Lima")))
-                .idUsuarioCreacion(request.getIdUsuarioCreacion())
+                .usuarioCreacionId(request.getUsuarioCreacionId())
                 // Los campos de resolución se dejan null inicialmente
                 .fechaResolucion(null)
-                .idUsuarioResolucion(null)
+                .usuarioResolucionId(null)
                 .comentarioResolucion(null)
                 .build();
     }
@@ -325,14 +325,14 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         log.debug("Enriqueciendo observación: {}", observacion.getId());
         
         // Obtener las entidades relacionadas de forma paralela usando cache
-        Mono<TipoObservacionResponse> tipoObservacionMono = observacion.getIdTipoObservacion() != null ?
-                observacionMasterDataCacheService.getTipoObservacion(observacion.getIdTipoObservacion())
-                    .onErrorMap(error -> ObservacionMasterDataException.tipoNotFound(observacion.getIdTipoObservacion()))
+        Mono<TipoObservacionResponse> tipoObservacionMono = observacion.getTipoObservacionId() != null ?
+                observacionMasterDataCacheService.getTipoObservacion(observacion.getTipoObservacionId())
+                    .onErrorMap(error -> ObservacionMasterDataException.tipoNotFound(observacion.getTipoObservacionId()))
                     .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(TipoObservacionResponse.builder().build());
 
-        Mono<EstadoObservacionResponse> estadoObservacionMono = observacion.getIdEstadoObservacion() != null ?
-                observacionMasterDataCacheService.getEstadoObservacion(observacion.getIdEstadoObservacion())
+        Mono<EstadoObservacionResponse> estadoObservacionMono = observacion.getEstadoObservacionId() != null ?
+                observacionMasterDataCacheService.getEstadoObservacion(observacion.getEstadoObservacionId())
                     .onErrorMap(error -> ObservacionMasterDataException.cacheError("obtener estado observacion", error))
                     .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(EstadoObservacionResponse.builder().build());
@@ -353,16 +353,16 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         
         return ObservacionNeumaticoResponse.builder()
                 .id(entity.getId())
-                .idNeumatico(entity.getIdNeumatico())
-                .idEquipo(entity.getIdEquipo())
+                .neumaticoId(entity.getNeumaticoId())
+                .equipoId(entity.getEquipoId())
                 .posicion(entity.getPosicion())
                 .tipoObservacionResponse(tipoObservacionResponse.getId() != null ? tipoObservacionResponse : null)
                 .descripcion(entity.getDescripcion())
                 .estadoObservacionResponse(estadoObservacionResponse.getId() != null ? estadoObservacionResponse : null)
                 .fechaCreacion(entity.getFechaCreacion())
-                .idUsuarioCreacion(entity.getIdUsuarioCreacion())
+                .usuarioCreacionId(entity.getUsuarioCreacionId())
                 .fechaResolucion(entity.getFechaResolucion())
-                .idUsuarioResolucion(entity.getIdUsuarioResolucion())
+                .usuarioResolucionId(entity.getUsuarioResolucionId())
                 .comentarioResolucion(entity.getComentarioResolucion())
                 .build();
     }

@@ -64,7 +64,7 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
         
         return getCachedEntity(cacheKey, ConfiguracionEmpresaEquipo.class)
                 .switchIfEmpty(
-                    configuracionEmpresaEquipoRepository.findByIdEmpresaAndIdTipoEquipo(empresaId, tipoEquipoId)
+                    configuracionEmpresaEquipoRepository.findByEmpresaIdAndTipoEquipoId(empresaId, tipoEquipoId)
                             .flatMap(config -> cacheEntity(cacheKey, config, MASTER_DATA_TTL)
                                     .thenReturn(config))
                             .doOnSuccess(config -> log.debug("Configuración empresa {} - tipo {} cargada desde BD", 
@@ -98,7 +98,7 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
 
                     return getCachedEntity(cacheKey, MovimientoNeumatico.class)
                             .switchIfEmpty(
-                                    movimientoNeumaticoRepository.findTopByIdNeumaticoAndIdTipoMovimientoOrderByIdDesc(
+                                    movimientoNeumaticoRepository.findTopByNeumaticoIdAndTipoMovimientoIdOrderByIdDesc(
                                                     neumaticoId, tipoMovimientoId)
                                             .flatMap(movement -> cacheEntity(cacheKey, movement, MOVEMENT_TTL)
                                                     .thenReturn(movement))

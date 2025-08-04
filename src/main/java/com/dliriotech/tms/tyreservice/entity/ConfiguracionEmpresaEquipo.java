@@ -21,10 +21,10 @@ public class ConfiguracionEmpresaEquipo {
     private Integer id;
     
     @Column("id_empresa")
-    private Integer idEmpresa;
+    private Integer empresaId;
     
     @Column("id_tipo_equipo")
-    private Integer idTipoEquipo;
+    private Integer tipoEquipoId;
     
     @Column("rtd_minimo_reencauche")
     private BigDecimal rtdMinimoReencauche;
