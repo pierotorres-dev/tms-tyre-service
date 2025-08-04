@@ -2,6 +2,7 @@ package com.dliriotech.tms.tyreservice.controller;
 
 import com.dliriotech.tms.tyreservice.dto.NeumaticoRequest;
 import com.dliriotech.tms.tyreservice.dto.NeumaticoResponse;
+import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoNuevoRequest;
 import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
 import com.dliriotech.tms.tyreservice.service.ObservacionNeumaticoService;
@@ -53,5 +54,12 @@ public class NeumaticoController {
             return observacionNeumaticoService.getAllObservacionesPendientesAndByNeumaticoId(neumaticoId);
         }
         return observacionNeumaticoService.getAllObservacionesByNeumaticoId(neumaticoId);
+    }
+
+    @PostMapping(value = "/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<ObservacionNeumaticoResponse> createObservacion(
+            @Valid @RequestBody ObservacionNeumaticoNuevoRequest request) {
+        return observacionNeumaticoService.saveObservacion(request);
     }
 }

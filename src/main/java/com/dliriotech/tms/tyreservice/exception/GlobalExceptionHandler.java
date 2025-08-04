@@ -52,7 +52,11 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         ErrorDetails errorDetails = null;
         
         // Excepciones específicas primero - Observaciones
-        if (error instanceof ObservacionNotFoundException) {
+        if (error instanceof ObservacionCreationException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        else if (error instanceof ObservacionNotFoundException) {
             BaseException baseEx = (BaseException) error;
             errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
         }

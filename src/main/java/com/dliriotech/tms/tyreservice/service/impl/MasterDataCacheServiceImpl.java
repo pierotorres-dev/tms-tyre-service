@@ -41,7 +41,6 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
     private static final String TIPO_EQUIPO_PREFIX = "cache:tipoEquipo:";
     private static final String MOVEMENT_PREFIX = "cache:movement:";
     private static final String RTD_MINIMO_PREFIX = "cache:rtdMinimo:";
-    private static final String TIPO_MOVIMIENTO_PREFIX = "cache:tipoMovimiento:";
     private static final String TIPO_MOVIMIENTO_BY_NAME_PREFIX = "cache:tipoMovimiento:byName:";
 
     @Override
