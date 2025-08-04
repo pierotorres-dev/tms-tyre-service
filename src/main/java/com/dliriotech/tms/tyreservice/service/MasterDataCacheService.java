@@ -44,19 +44,28 @@ public interface MasterDataCacheService {
      * Combina las consultas de equipo, configuración y tipo de equipo.
      */
     Mono<BigDecimal> getRtdMinimo(Integer equipoId);
-    
+
+    /**
+     * Obtiene el ID de un tipo de movimiento por su nombre
+     * @param nombre Nombre del tipo de movimiento
+     * @return Mono con el ID del tipo de movimiento
+     */
+    Mono<Integer> getTipoMovimientoIdByNombre(String nombre);
+
     /**
      * Invalida cache relacionado con un equipo específico.
      */
     Mono<Void> invalidateEquipoCache(Integer equipoId);
-    
+
     /**
      * Invalida cache de configuración empresa-equipo.
      */
     Mono<Void> invalidateConfiguracionCache(Integer empresaId, Integer tipoEquipoId);
-    
+
     /**
      * Invalida cache de movimientos de un neumático específico.
      */
     Mono<Void> invalidateMovimientoCache(Integer neumaticoId);
+
+    Mono<Void> invalidateTipoMovimientoIdByNombreCache(String nombre);
 }

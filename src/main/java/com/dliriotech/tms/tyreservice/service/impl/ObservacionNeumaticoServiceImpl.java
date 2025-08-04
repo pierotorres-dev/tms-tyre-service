@@ -1,9 +1,13 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
+import com.dliriotech.tms.tyreservice.constants.EstadoObservacionConstants;
 import com.dliriotech.tms.tyreservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
 import com.dliriotech.tms.tyreservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
+import com.dliriotech.tms.tyreservice.exception.ObservacionMasterDataException;
+import com.dliriotech.tms.tyreservice.exception.ObservacionNotFoundException;
+import com.dliriotech.tms.tyreservice.exception.ObservacionProcessingException;
 import com.dliriotech.tms.tyreservice.repository.MapaObservacionSolucionRepository;
 import com.dliriotech.tms.tyreservice.repository.ObservacionNeumaticoRepository;
 import com.dliriotech.tms.tyreservice.service.ObservacionMasterDataCacheService;
@@ -26,22 +30,70 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
     @Override
     public Flux<ObservacionNeumaticoResponse> getAllObservacionesByNeumaticoIdAndTipoMovimientoId(Integer neumaticoId, Integer tipoMovimientoId) {
-        log.debug("Obteniendo observaciones solucionables para neumático {} y tipo movimiento {}", neumaticoId, tipoMovimientoId);
-        
-        return mapaObservacionSolucionRepository.findTipoObservacionIdsByTipoMovimientoId(tipoMovimientoId)
-                .collectList()
-                .filter(tipoObservacionIds -> !tipoObservacionIds.isEmpty())
-                .flatMapMany(tipoObservacionIds -> 
-                    observacionNeumaticoRepository.findByNeumaticoIdAndTipoObservacionIdsAndEstadoObservacionId(
-                        neumaticoId, tipoObservacionIds)
+        log.info("Obteniendo observaciones solucionables para neumático {} y tipo movimiento {}", neumaticoId, tipoMovimientoId);
+
+        // Validación de parámetros
+        if (neumaticoId == null || neumaticoId <= 0) {
+            return Flux.error(ObservacionProcessingException.invalidNeumaticoId(neumaticoId));
+        }
+        if (tipoMovimientoId == null || tipoMovimientoId <= 0) {
+            return Flux.error(ObservacionProcessingException.invalidTipoMovimiento(tipoMovimientoId));
+        }
+
+        // Primero obtener el ID del estado "Pendiente" desde el caché
+        return observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                .onErrorMap(error -> ObservacionMasterDataException.estadoNotFound(EstadoObservacionConstants.PENDIENTE))
+                .flatMapMany(estadoPendienteId ->
+                        mapaObservacionSolucionRepository.findTipoObservacionIdsByTipoMovimientoId(tipoMovimientoId)
+                                .collectList()
+                                .filter(tipoObservacionIds -> !tipoObservacionIds.isEmpty())
+                                .flatMapMany(tipoObservacionIds ->
+                                        observacionNeumaticoRepository.findByNeumaticoIdAndTipoObservacionIdsAndEstadoObservacionId(
+                                                neumaticoId, tipoObservacionIds, estadoPendienteId)
+                                )
+                                .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, tipoMovimientoId)))
                 )
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnError(error -> log.error("Error al obtener observaciones para neumático {} y tipo movimiento {}: {}", 
-                    neumaticoId, tipoMovimientoId, error.getMessage()))
-                .onErrorResume(error -> {
-                    log.warn("Retornando flujo vacío debido a error: {}", error.getMessage());
-                    return Flux.empty();
-                });
+                .doOnError(error -> log.error("Error al obtener observaciones para neumático {} y tipo movimiento {}: {}",
+                        neumaticoId, tipoMovimientoId, error.getMessage()));
+    }
+
+    @Override
+    public Flux<ObservacionNeumaticoResponse> getAllObservacionesByNeumaticoId(Integer neumaticoId) {
+        log.info("Obteniendo todas las observaciones para neumático {}", neumaticoId);
+        
+        // Validación de parámetros
+        if (neumaticoId == null || neumaticoId <= 0) {
+            return Flux.error(ObservacionProcessingException.invalidNeumaticoId(neumaticoId));
+        }
+        
+        return observacionNeumaticoRepository.findByNeumaticoIdOrderByFechaCreacionDesc(neumaticoId)
+                .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId)))
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnError(error -> log.error("Error al obtener observaciones para neumático {}: {}", 
+                    neumaticoId, error.getMessage()));
+    }
+
+    @Override
+    public Flux<ObservacionNeumaticoResponse> getAllObservacionesPendientesAndByNeumaticoId(Integer neumaticoId) {
+        log.info("Obteniendo observaciones pendientes para neumático {}", neumaticoId);
+        
+        // Validación de parámetros
+        if (neumaticoId == null || neumaticoId <= 0) {
+            return Flux.error(ObservacionProcessingException.invalidNeumaticoId(neumaticoId));
+        }
+        
+        // Primero obtener el ID del estado "Pendiente" desde el caché
+        return observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                .onErrorMap(error -> ObservacionMasterDataException.estadoNotFound(EstadoObservacionConstants.PENDIENTE))
+                .flatMapMany(estadoPendienteId ->
+                    observacionNeumaticoRepository.findByNeumaticoIdAndEstadoObservacionIdOrderByFechaCreacionDesc(
+                        neumaticoId, estadoPendienteId)
+                        .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, EstadoObservacionConstants.PENDIENTE)))
+                )
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnError(error -> log.error("Error al obtener observaciones pendientes para neumático {}: {}", 
+                    neumaticoId, error.getMessage()));
     }
 
     private Mono<ObservacionNeumaticoResponse> enrichObservacionWithRelations(ObservacionNeumatico observacion) {
@@ -49,11 +101,15 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         
         // Obtener las entidades relacionadas de forma paralela usando cache
         Mono<TipoObservacionResponse> tipoObservacionMono = observacion.getIdTipoObservacion() != null ?
-                observacionMasterDataCacheService.getTipoObservacion(observacion.getIdTipoObservacion()).subscribeOn(Schedulers.boundedElastic()) :
+                observacionMasterDataCacheService.getTipoObservacion(observacion.getIdTipoObservacion())
+                    .onErrorMap(error -> ObservacionMasterDataException.tipoNotFound(observacion.getIdTipoObservacion()))
+                    .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(TipoObservacionResponse.builder().build());
 
         Mono<EstadoObservacionResponse> estadoObservacionMono = observacion.getIdEstadoObservacion() != null ?
-                observacionMasterDataCacheService.getEstadoObservacion(observacion.getIdEstadoObservacion()).subscribeOn(Schedulers.boundedElastic()) :
+                observacionMasterDataCacheService.getEstadoObservacion(observacion.getIdEstadoObservacion())
+                    .onErrorMap(error -> ObservacionMasterDataException.cacheError("obtener estado observacion", error))
+                    .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(EstadoObservacionResponse.builder().build());
 
         // Combinar los resultados
@@ -61,7 +117,8 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 .flatMap(tuple -> 
                     Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2()))
                         .subscribeOn(Schedulers.boundedElastic())
-                );
+                )
+                .onErrorMap(error -> ObservacionProcessingException.enrichmentError(observacion.getId().toString(), error));
     }
 
     private ObservacionNeumaticoResponse mapEntityToResponse(

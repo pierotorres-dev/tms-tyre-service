@@ -2,6 +2,8 @@ package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.tyreservice.dto.TipoObservacionResponse;
+import com.dliriotech.tms.tyreservice.entity.EstadoObservacion;
+import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
 import com.dliriotech.tms.tyreservice.repository.EstadoObservacionRepository;
 import com.dliriotech.tms.tyreservice.repository.TipoObservacionRepository;
 import com.dliriotech.tms.tyreservice.service.ObservacionMasterDataCacheService;
@@ -31,18 +33,19 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     // Prefijos de cache
     private static final String TIPO_OBSERVACION_PREFIX = "cache:tipoObservacion:";
     private static final String ESTADO_OBSERVACION_PREFIX = "cache:estadoObservacion:";
+    private static final String ESTADO_OBSERVACION_BYNAME_PREFIX = "cache:estadoObservacion:byName:";
 
     @Override
     public Mono<TipoObservacionResponse> getTipoObservacion(Integer tipoObservacionId) {
         String cacheKey = TIPO_OBSERVACION_PREFIX + tipoObservacionId;
-        
+
         return getCachedEntity(cacheKey, TipoObservacionResponse.class)
                 .switchIfEmpty(
-                    tipoObservacionRepository.findById(tipoObservacionId)
-                            .map(this::mapTipoObservacionToResponse)
-                            .flatMap(tipoResponse -> cacheEntity(cacheKey, tipoResponse, MASTER_DATA_TTL)
-                                    .thenReturn(tipoResponse))
-                            .doOnSuccess(tipo -> log.debug("Tipo observación {} cargado desde BD y cacheado", tipoObservacionId))
+                        tipoObservacionRepository.findById(tipoObservacionId)
+                                .map(this::mapTipoObservacionToResponse)
+                                .flatMap(tipoResponse -> cacheEntity(cacheKey, tipoResponse, MASTER_DATA_TTL)
+                                        .thenReturn(tipoResponse))
+                                .doOnSuccess(tipo -> log.debug("Tipo observación {} cargado desde BD y cacheado", tipoObservacionId))
                 )
                 .defaultIfEmpty(TipoObservacionResponse.builder().build())
                 .doOnNext(tipo -> log.debug("Tipo observación {} obtenido desde cache", tipoObservacionId))
@@ -56,14 +59,14 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     @Override
     public Mono<EstadoObservacionResponse> getEstadoObservacion(Integer estadoObservacionId) {
         String cacheKey = ESTADO_OBSERVACION_PREFIX + estadoObservacionId;
-        
+
         return getCachedEntity(cacheKey, EstadoObservacionResponse.class)
                 .switchIfEmpty(
-                    estadoObservacionRepository.findById(estadoObservacionId)
-                            .map(this::mapEstadoObservacionToResponse)
-                            .flatMap(estadoResponse -> cacheEntity(cacheKey, estadoResponse, MASTER_DATA_TTL)
-                                    .thenReturn(estadoResponse))
-                            .doOnSuccess(estado -> log.debug("Estado observación {} cargado desde BD y cacheado", estadoObservacionId))
+                        estadoObservacionRepository.findById(estadoObservacionId)
+                                .map(this::mapEstadoObservacionToResponse)
+                                .flatMap(estadoResponse -> cacheEntity(cacheKey, estadoResponse, MASTER_DATA_TTL)
+                                        .thenReturn(estadoResponse))
+                                .doOnSuccess(estado -> log.debug("Estado observación {} cargado desde BD y cacheado", estadoObservacionId))
                 )
                 .defaultIfEmpty(EstadoObservacionResponse.builder().build())
                 .doOnNext(estado -> log.debug("Estado observación {} obtenido desde cache", estadoObservacionId))
@@ -72,6 +75,28 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
                     return Mono.just(EstadoObservacionResponse.builder().build());
                 })
                 .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Mono<Integer> getEstadoObservacionIdByNombre(String nombre) {
+        String cacheKey = ESTADO_OBSERVACION_BYNAME_PREFIX + nombre;
+
+        return redisTemplate.opsForValue().get(cacheKey)
+                .cast(Integer.class)
+                .switchIfEmpty(
+                        estadoObservacionRepository.findByNombre(nombre)
+                                .map(EstadoObservacion::getId)
+                                .flatMap(id -> {
+                                    // Guardar en cache por 24 horas
+                                    return redisTemplate.opsForValue()
+                                            .set(cacheKey, id, Duration.ofHours(24))
+                                            .thenReturn(id);
+                                })
+                                .doOnError(error -> log.error("Error al obtener ID de estado de observación para nombre {}: {}",
+                                        nombre, error.getMessage()))
+                                .switchIfEmpty(Mono.error(new NeumaticoException("404",
+                                        "No se encontró estado de observación con nombre: " + nombre)))
+                );
     }
 
     @Override
@@ -87,6 +112,14 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
         String cacheKey = ESTADO_OBSERVACION_PREFIX + estadoObservacionId;
         return redisTemplate.delete(cacheKey)
                 .doOnSuccess(v -> log.debug("Cache de estado observación {} invalidado", estadoObservacionId))
+                .then();
+    }
+
+    @Override
+    public Mono<Void> invalidateEstadoObservacionIdByNombreCache(String nombre) {
+        String cacheKey = ESTADO_OBSERVACION_BYNAME_PREFIX + nombre;
+        return redisTemplate.delete(cacheKey)
+                .doOnSuccess(v -> log.debug("Cache de estado observación by name {} invalidado", nombre))
                 .then();
     }
 

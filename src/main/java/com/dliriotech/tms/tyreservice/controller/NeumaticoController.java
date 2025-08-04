@@ -44,4 +44,14 @@ public class NeumaticoController {
             @RequestParam Integer tipoMovimientoId) {
         return observacionNeumaticoService.getAllObservacionesByNeumaticoIdAndTipoMovimientoId(neumaticoId, tipoMovimientoId);
     }
+
+    @GetMapping(value = "/{neumaticoId}/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<ObservacionNeumaticoResponse> getObservacionesByNeumatico(
+            @PathVariable Integer neumaticoId,
+            @RequestParam(value = "estado", required = false) String estado) {
+        if ("pendiente".equalsIgnoreCase(estado)) {
+            return observacionNeumaticoService.getAllObservacionesPendientesAndByNeumaticoId(neumaticoId);
+        }
+        return observacionNeumaticoService.getAllObservacionesByNeumaticoId(neumaticoId);
+    }
 }

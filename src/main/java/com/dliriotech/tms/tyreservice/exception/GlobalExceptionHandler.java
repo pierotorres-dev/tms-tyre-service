@@ -51,8 +51,21 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         // Buscar el handler más específico (evaluando desde las clases más específicas hacia las generales)
         ErrorDetails errorDetails = null;
         
-        // Excepciones específicas primero
-        if (error instanceof PosicionAlreadyOccupiedException) {
+        // Excepciones específicas primero - Observaciones
+        if (error instanceof ObservacionNotFoundException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        else if (error instanceof ObservacionMasterDataException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        else if (error instanceof ObservacionProcessingException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        // Excepciones específicas de neumáticos
+        else if (error instanceof PosicionAlreadyOccupiedException) {
             BaseException baseEx = (BaseException) error;
             errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
         }
