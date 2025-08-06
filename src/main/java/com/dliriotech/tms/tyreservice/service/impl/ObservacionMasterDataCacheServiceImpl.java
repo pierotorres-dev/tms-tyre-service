@@ -3,6 +3,7 @@ package com.dliriotech.tms.tyreservice.service.impl;
 import com.dliriotech.tms.tyreservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.tyreservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.tyreservice.entity.EstadoObservacion;
+import com.dliriotech.tms.tyreservice.entity.TipoObservacion;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
 import com.dliriotech.tms.tyreservice.repository.EstadoObservacionRepository;
 import com.dliriotech.tms.tyreservice.repository.TipoObservacionRepository;
@@ -126,20 +127,20 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     /**
      * Mapea entidad TipoObservacion a TipoObservacionResponse.
      */
-    private TipoObservacionResponse mapTipoObservacionToResponse(com.dliriotech.tms.tyreservice.entity.TipoObservacion entity) {
+    private TipoObservacionResponse mapTipoObservacionToResponse(TipoObservacion entity) {
         return TipoObservacionResponse.builder()
                 .id(entity.getId())
                 .nombre(entity.getNombre())
                 .ambito(entity.getAmbito())
                 .descripcion(entity.getDescripcion())
-                .activo(entity.getActivo() != null && entity.getActivo() ? 1 : 0)
+                .activo(entity.getActivo())
                 .build();
     }
 
     /**
      * Mapea entidad EstadoObservacion a EstadoObservacionResponse.
      */
-    private EstadoObservacionResponse mapEstadoObservacionToResponse(com.dliriotech.tms.tyreservice.entity.EstadoObservacion entity) {
+    private EstadoObservacionResponse mapEstadoObservacionToResponse(EstadoObservacion entity) {
         return EstadoObservacionResponse.builder()
                 .id(entity.getId())
                 .nombre(entity.getNombre())

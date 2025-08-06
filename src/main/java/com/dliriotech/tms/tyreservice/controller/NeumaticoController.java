@@ -24,12 +24,14 @@ public class NeumaticoController {
         return neumaticoService.getAllNeumaticosByEquipoId(equipoId);
     }
 
+    //TODO: Improve this method
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<NeumaticoResponse> createNeumatico(@Valid @RequestBody NeumaticoRequest request) {
         return neumaticoService.saveNeumatico(request);
     }
 
+    //TODO: Improve this method
     @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<NeumaticoResponse> updateNeumatico(@PathVariable Integer id, 
                                                    @Valid @RequestBody NeumaticoRequest request) {
@@ -55,13 +57,13 @@ public class NeumaticoController {
 
     @PostMapping(value = "/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ObservacionNeumaticoResponse> createObservacion(
+    public Mono<ObservacionNeumaticoResponse> createObservacionNeumatico(
             @Valid @RequestBody ObservacionNeumaticoNuevoRequest request) {
         return observacionNeumaticoService.saveObservacion(request);
     }
 
     @PatchMapping(value = "/observaciones/{observacionId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ObservacionNeumaticoResponse> updateObservacion(
+    public Mono<ObservacionNeumaticoResponse> updateObservacionNeumatico(
             @PathVariable Integer observacionId,
             @Valid @RequestBody ObservacionNeumaticoUpdateRequest request) {
         return observacionNeumaticoService.updateObservacion(observacionId, request);

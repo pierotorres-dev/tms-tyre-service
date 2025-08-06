@@ -54,7 +54,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                                         observacionNeumaticoRepository.findByNeumaticoIdAndTipoObservacionIdsAndEstadoObservacionId(
                                                 neumaticoId, tipoObservacionIds, estadoPendienteId)
                                 )
-                                .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, tipoMovimientoId)))
+                                //.switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, tipoMovimientoId)))
                 )
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnError(error -> log.error("Error al obtener observaciones para neumático {} y tipo movimiento {}: {}",
@@ -71,7 +71,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         }
         
         return observacionNeumaticoRepository.findByNeumaticoIdOrderByFechaCreacionDesc(neumaticoId)
-                .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId)))
+                //.switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId)))
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnError(error -> log.error("Error al obtener observaciones para neumático {}: {}", 
                     neumaticoId, error.getMessage()));
@@ -92,7 +92,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                 .flatMapMany(estadoPendienteId ->
                     observacionNeumaticoRepository.findByNeumaticoIdAndEstadoObservacionIdOrderByFechaCreacionDesc(
                         neumaticoId, estadoPendienteId)
-                        .switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, EstadoObservacionConstants.PENDIENTE)))
+                        //.switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, EstadoObservacionConstants.PENDIENTE)))
                 )
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnError(error -> log.error("Error al obtener observaciones pendientes para neumático {}: {}", 
