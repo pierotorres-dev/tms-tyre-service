@@ -100,6 +100,27 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
     }
 
     @Override
+    public Flux<ObservacionNeumaticoResponse> getAllObservacionesPendientesAndByEquipoId(Integer equipoId) {
+        log.info("Obteniendo observaciones pendientes de neumáticos del equipo {}", equipoId);
+
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(ObservacionProcessingException.invalidEquipoId(equipoId));
+        }
+
+        return observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                .onErrorMap(error -> ObservacionMasterDataException.estadoNotFound(EstadoObservacionConstants.PENDIENTE))
+                .flatMapMany(estadoPendienteId ->
+                                observacionNeumaticoRepository.findByEquipoIdAndEstadoObservacionId(
+                                        equipoId, estadoPendienteId)
+                        //.switchIfEmpty(Flux.error(new ObservacionNotFoundException(neumaticoId, EstadoObservacionConstants.PENDIENTE)))
+                )
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnError(error -> log.error("Error al obtener observaciones pendientes para neumáticos por equipo {}: {}",
+                        equipoId, error.getMessage()));
+    }
+
+    @Override
     public Mono<ObservacionNeumaticoResponse> saveObservacion(ObservacionNeumaticoNuevoRequest observacionNeumaticoNuevoRequest) {
         log.info("Creando nueva observación para neumático {}", observacionNeumaticoNuevoRequest.getNeumaticoId());
         

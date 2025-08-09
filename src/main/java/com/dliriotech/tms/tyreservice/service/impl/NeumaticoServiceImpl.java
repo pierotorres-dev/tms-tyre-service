@@ -298,7 +298,20 @@ public class NeumaticoServiceImpl implements NeumaticoService {
             DisenoReencaucheResponse disenoResponse,
             ClasificacionNeumaticoResponse clasificacionResponse,
             RtdThresholdsResponse rtdThresholds) {
-        
+
+        String disenoVigente = null;
+        if (entity.getNumeroReencauches() != null && entity.getNumeroReencauches() > 0) {
+            disenoVigente = disenoResponse != null && disenoResponse.getId() != null ?
+                    disenoResponse.getNombreDiseno() : null;
+        } else {
+            disenoVigente = catalogoResponse != null ? catalogoResponse.getModeloDiseno() : null;
+        }
+
+        String estadoReencauche = "Nuevo";
+        if (entity.getNumeroReencauches() != null && entity.getNumeroReencauches() > 0) {
+            estadoReencauche = "R" + entity.getNumeroReencauches();
+        }
+
         return NeumaticoResponse.builder()
                 .id(entity.getId())
                 .empresaId(entity.getEmpresaId())
@@ -320,6 +333,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 .disenoReencaucheResponse(disenoResponse.getId() != null ? disenoResponse : null)
                 .clasificacionNeumaticoResponse(clasificacionResponse.getId() != null ? clasificacionResponse : null)
                 .rtdThresholds(rtdThresholds)
+                .disenoVigente(disenoVigente)
+                .estadoReencauche(estadoReencauche)
                 .build();
     }
 }

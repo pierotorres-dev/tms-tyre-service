@@ -17,7 +17,6 @@ import reactor.core.publisher.Mono;
 public class NeumaticoController {
 
     private final NeumaticoService neumaticoService;
-    private final ObservacionNeumaticoService observacionNeumaticoService;
 
     @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(@PathVariable Integer equipoId) {
@@ -36,36 +35,5 @@ public class NeumaticoController {
     public Mono<NeumaticoResponse> updateNeumatico(@PathVariable Integer id, 
                                                    @Valid @RequestBody NeumaticoRequest request) {
         return neumaticoService.updateNeumatico(id, request);
-    }
-
-    @GetMapping(value = "/{neumaticoId}/observaciones/solucionables", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<ObservacionNeumaticoResponse> getObservacionesSolucionables(
-            @PathVariable Integer neumaticoId,
-            @RequestParam Integer tipoMovimientoId) {
-        return observacionNeumaticoService.getAllObservacionesByNeumaticoIdAndTipoMovimientoId(neumaticoId, tipoMovimientoId);
-    }
-
-    @GetMapping(value = "/{neumaticoId}/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<ObservacionNeumaticoResponse> getObservacionesByNeumatico(
-            @PathVariable Integer neumaticoId,
-            @RequestParam(value = "estado", required = false) String estado) {
-        if ("pendiente".equalsIgnoreCase(estado)) {
-            return observacionNeumaticoService.getAllObservacionesPendientesAndByNeumaticoId(neumaticoId);
-        }
-        return observacionNeumaticoService.getAllObservacionesByNeumaticoId(neumaticoId);
-    }
-
-    @PostMapping(value = "/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ObservacionNeumaticoResponse> createObservacionNeumatico(
-            @Valid @RequestBody ObservacionNeumaticoNuevoRequest request) {
-        return observacionNeumaticoService.saveObservacion(request);
-    }
-
-    @PatchMapping(value = "/observaciones/{observacionId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ObservacionNeumaticoResponse> updateObservacionNeumatico(
-            @PathVariable Integer observacionId,
-            @Valid @RequestBody ObservacionNeumaticoUpdateRequest request) {
-        return observacionNeumaticoService.updateObservacion(observacionId, request);
     }
 }

@@ -52,4 +52,8 @@ public class NeumaticoResponse {
     private ClasificacionNeumaticoResponse clasificacionNeumaticoResponse;
 
     private RtdThresholdsResponse rtdThresholds;
+
+    private String disenoVigente;
+
+    private String estadoReencauche;
 }

@@ -19,6 +19,11 @@ public class ObservacionProcessingException extends BaseException {
         return new ObservacionProcessingException(
             String.format("ID de neumático inválido: %d", neumaticoId));
     }
+
+    public static ObservacionProcessingException invalidEquipoId(Integer equipoId) {
+        return new ObservacionProcessingException(
+                String.format("ID de neumático equipo: %d", equipoId));
+    }
     
     public static ObservacionProcessingException invalidTipoMovimiento(Integer tipoMovimientoId) {
         return new ObservacionProcessingException(
