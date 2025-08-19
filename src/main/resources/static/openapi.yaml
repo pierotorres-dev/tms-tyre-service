@@ -1,0 +1,1240 @@
+openapi: 3.0.3
+info:
+  title: TMS Tyre Service API
+  description: API para la gestión de neumáticos y observaciones en el sistema TMS
+  version: 1.0.0
+  contact:
+    name: DLIRIO Tech Team
+    email: support@dliriotech.com
+
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+  - url: https://api.tms.dliriotech.com
+    description: Producción
+
+tags:
+  - name: neumaticos
+    description: Operaciones relacionadas con neumáticos
+  - name: observaciones
+    description: Operaciones relacionadas con observaciones de neumáticos
+
+paths:
+  /api/v1/neumaticos/equipo/{equipoId}:
+    get:
+      tags:
+        - neumaticos
+      summary: Obtener neumáticos por equipo
+      description: Retorna todos los neumáticos asociados a un equipo específico ordenados por posición descendente
+      operationId: getAllNeumaticosByEquipoId
+      parameters:
+        - name: equipoId
+          in: path
+          required: true
+          description: ID del equipo
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 123
+      responses:
+        '200':
+          description: Lista de neumáticos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NeumaticoResponse'
+              examples:
+                success:
+                  summary: Respuesta exitosa con neumáticos
+                  value:
+                    - id: 1
+                      empresaId: 1
+                      catalogoNeumaticoResponse:
+                        id: 1
+                        marcaNeumaticoResponse:
+                          id: 1
+                          nombre: "Bridgestone"
+                        medidaNeumaticoResponse:
+                          id: 1
+                          descripcion: "11R22.5"
+                          tipoConstruccion: "Radial"
+                          indiceCarga: "146/143"
+                          simboloVelocidad: "L"
+                          plyRating: 16
+                        modeloDiseno: "M840"
+                        tipoUso: "Carretera"
+                        rtdOriginal: 18.5
+                        presionMaximaPsi: 120
+                        treadwear: 300
+                        traccion: "A"
+                        temperatura: "B"
+                      equipoId: 123
+                      posicion: 1
+                      serieCodigo: "NEU-001-2023"
+                      costoInicial: 850.00
+                      proveedorResponse:
+                        id: 1
+                        nombre: "Proveedor ABC"
+                        ruc: "20123456789"
+                      kmInstalacion: 15000
+                      fechaInstalacion: "2023-01-15"
+                      rtd1: 18.2
+                      rtd2: 18.1
+                      rtd3: 18.0
+                      rtdActual: 12.5
+                      kmAcumulados: 75000
+                      kmCicloActual: 60000
+                      numeroReencauches: 1
+                      disenoReencaucheResponse:
+                        id: 1
+                        nombreDiseno: "Highway Plus"
+                        proveedorReencauche: "Reencauches SA"
+                      clasificacionNeumaticoResponse:
+                        id: 1
+                        nombre: "Premium"
+                        descripcion: "Neumático de alta calidad"
+                      rtdThresholds:
+                        rtdMinimo: 3.0
+                        rtdMaximo: 20.0
+                empty:
+                  summary: No hay neumáticos para el equipo
+                  value: []
+        '400':
+          description: Parámetros de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-VAL-001"
+                message: "equipoId debe ser un número positivo válido"
+                path: "/api/v1/neumaticos/equipo/0"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-NEU-OPE-001"
+                message: "Error al obtener neumáticos del equipo 123"
+                path: "/api/v1/neumaticos/equipo/123"
+                timestamp: "2023-08-06 10:30:00"
+
+  /api/v1/observaciones-neumaticos/neumatico/{neumaticoId}/solucionables:
+    get:
+      tags:
+        - observaciones
+      summary: Obtener observaciones solucionables
+      description: Retorna las observaciones pendientes de un neumático que pueden ser solucionadas por un tipo de movimiento específico
+      operationId: getObservacionesSolucionables
+      parameters:
+        - name: neumaticoId
+          in: path
+          required: true
+          description: ID del neumático
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 1
+        - name: tipoMovimientoId
+          in: query
+          required: true
+          description: ID del tipo de movimiento
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 2
+      responses:
+        '200':
+          description: Lista de observaciones solucionables obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ObservacionNeumaticoResponse'
+              examples:
+                success:
+                  summary: Respuesta exitosa con observaciones
+                  value:
+                    - id: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
+                      equipoId: 123
+                      posicion: 1
+                      tipoObservacionResponse:
+                        id: 1
+                        nombre: "Desgaste irregular"
+                        ambito: "Rodadura"
+                        descripcion: "Desgaste no uniforme en la banda de rodadura"
+                        activo: true
+                      descripcion: "Se observa desgaste irregular en el hombro derecho"
+                      estadoObservacionResponse:
+                        id: 1
+                        nombre: "Pendiente"
+                        descripcion: "Observación pendiente de resolución"
+                      fechaCreacion: "2023-08-01 10:30:00"
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
+                      fechaResolucion: null
+                      usuarioResolucionId: null
+                      comentarioResolucion: null
+                empty:
+                  summary: No hay observaciones solucionables
+                  value: []
+        '400':
+          description: Parámetros de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-VAL-001"
+                message: "neumaticoId debe ser un número positivo válido"
+                path: "/api/v1/observaciones-neumaticos/neumatico/0/solucionables"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-OPE-001"
+                message: "Error al obtener observaciones solucionables"
+                path: "/api/v1/observaciones-neumaticos/neumatico/1/solucionables"
+                timestamp: "2023-08-06 10:30:00"
+
+  /api/v1/observaciones-neumaticos/neumatico/{neumaticoId}:
+    get:
+      tags:
+        - observaciones
+      summary: Obtener observaciones de un neumático
+      description: Retorna todas las observaciones o solo las pendientes de un neumático específico
+      operationId: getObservacionesByNeumatico
+      parameters:
+        - name: neumaticoId
+          in: path
+          required: true
+          description: ID del neumático
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 1
+        - name: estado
+          in: query
+          required: false
+          description: Filtro por estado de observación. Si se especifica "pendiente", solo retorna observaciones pendientes
+          schema:
+            type: string
+            enum: [pendiente]
+          example: pendiente
+      responses:
+        '200':
+          description: Lista de observaciones obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ObservacionNeumaticoResponse'
+              examples:
+                all_observations:
+                  summary: Todas las observaciones
+                  value:
+                    - id: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
+                      equipoId: 123
+                      posicion: 1
+                      tipoObservacionResponse:
+                        id: 1
+                        nombre: "Desgaste irregular"
+                        ambito: "Rodadura"
+                        descripcion: "Desgaste no uniforme en la banda de rodadura"
+                        activo: true
+                      descripcion: "Se observa desgaste irregular en el hombro derecho"
+                      estadoObservacionResponse:
+                        id: 2
+                        nombre: "Resuelto"
+                        descripcion: "Observación resuelta satisfactoriamente"
+                      fechaCreacion: "2023-08-01 10:30:00"
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
+                      fechaResolucion: "2023-08-02 14:15:00"
+                      usuarioResolucionId: 3
+                      comentarioResolucion: "Se realizó rotación del neumático"
+                    - id: 2
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
+                      equipoId: 123
+                      posicion: 1
+                      tipoObservacionResponse:
+                        id: 2
+                        nombre: "Presión baja"
+                        ambito: "Inflado"
+                        descripcion: "Presión por debajo del rango recomendado"
+                        activo: true
+                      descripcion: "Presión detectada en 80 PSI"
+                      estadoObservacionResponse:
+                        id: 1
+                        nombre: "Pendiente"
+                        descripcion: "Observación pendiente de resolución"
+                      fechaCreacion: "2023-08-05 09:20:00"
+                      userInfoResponseCreacion:
+                        id: 4
+                        name: "Ana"
+                        lastName: "Martínez"
+                        fullName: "Ana Martínez"
+                      fechaResolucion: null
+                      usuarioResolucionId: null
+                      comentarioResolucion: null
+                pending_only:
+                  summary: Solo observaciones pendientes
+                  value:
+                    - id: 2
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
+                      equipoId: 123
+                      posicion: 1
+                      tipoObservacionResponse:
+                        id: 2
+                        nombre: "Presión baja"
+                        ambito: "Inflado"
+                        descripcion: "Presión por debajo del rango recomendado"
+                        activo: true
+                      descripcion: "Presión detectada en 80 PSI"
+                      estadoObservacionResponse:
+                        id: 1
+                        nombre: "Pendiente"
+                        descripcion: "Observación pendiente de resolución"
+                      fechaCreacion: "2023-08-05 09:20:00"
+                      userInfoResponseCreacion:
+                        id: 4
+                        name: "Ana"
+                        lastName: "Martínez"
+                        fullName: "Ana Martínez"
+                      fechaResolucion: null
+                      usuarioResolucionId: null
+                      comentarioResolucion: null
+                empty:
+                  summary: No hay observaciones
+                  value: []
+        '400':
+          description: Parámetros de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-VAL-001"
+                message: "neumaticoId debe ser un número positivo válido"
+                path: "/api/v1/observaciones-neumaticos/neumatico/0"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-OPE-002"
+                message: "Error al obtener observaciones del neumático"
+                path: "/api/v1/observaciones-neumaticos/neumatico/1"
+                timestamp: "2023-08-06 10:30:00"
+
+  /api/v1/observaciones-neumaticos/equipo/{equipoId}/pendientes:
+    get:
+      tags:
+        - observaciones
+      summary: Obtener observaciones pendientes por equipo
+      description: Retorna todas las observaciones pendientes asociadas a un equipo específico
+      operationId: getObservacionesPendientesByEquipo
+      parameters:
+        - name: equipoId
+          in: path
+          required: true
+          description: ID del equipo
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 123
+      responses:
+        '200':
+          description: Lista de observaciones pendientes obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ObservacionNeumaticoResponse'
+              examples:
+                success:
+                  summary: Respuesta exitosa con observaciones pendientes
+                  value:
+                    - id: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
+                      equipoId: 123
+                      posicion: 1
+                      tipoObservacionResponse:
+                        id: 1
+                        nombre: "Desgaste irregular"
+                        ambito: "Rodadura"
+                        descripcion: "Desgaste no uniforme en la banda de rodadura"
+                        activo: true
+                      descripcion: "Se observa desgaste irregular en el hombro derecho"
+                      estadoObservacionResponse:
+                        id: 1
+                        nombre: "Pendiente"
+                        descripcion: "Observación pendiente de resolución"
+                      fechaCreacion: "2023-08-01 10:30:00"
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
+                      fechaResolucion: null
+                      usuarioResolucionId: null
+                      comentarioResolucion: null
+                    - id: 3
+                      neumaticoSummary:
+                        id: 2
+                        serieCodigo: "NEU-002-2023"
+                      equipoId: 123
+                      posicion: 2
+                      tipoObservacionResponse:
+                        id: 2
+                        nombre: "Presión baja"
+                        ambito: "Inflado"
+                        descripcion: "Presión por debajo del rango recomendado"
+                        activo: true
+                      descripcion: "Presión detectada en 75 PSI"
+                      estadoObservacionResponse:
+                        id: 1
+                        nombre: "Pendiente"
+                        descripcion: "Observación pendiente de resolución"
+                      fechaCreacion: "2023-08-05 14:30:00"
+                      userInfoResponseCreacion:
+                        id: 6
+                        name: "Luis"
+                        lastName: "Rodríguez"
+                        fullName: "Luis Rodríguez"
+                      fechaResolucion: null
+                      usuarioResolucionId: null
+                      comentarioResolucion: null
+                empty:
+                  summary: No hay observaciones pendientes para el equipo
+                  value: []
+        '400':
+          description: Parámetros de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-VAL-001"
+                message: "equipoId debe ser un número positivo válido"
+                path: "/api/v1/observaciones-neumaticos/equipo/0/pendientes"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-OPE-003"
+                message: "Error al obtener observaciones pendientes del equipo"
+                path: "/api/v1/observaciones-neumaticos/equipo/123/pendientes"
+                timestamp: "2023-08-06 10:30:00"
+
+  /api/v1/observaciones-neumaticos:
+    post:
+      tags:
+        - observaciones
+      summary: Crear nueva observación
+      description: Crea una nueva observación para un neumático
+      operationId: createObservacionNeumatico
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObservacionNeumaticoNuevoRequest'
+            example:
+              neumaticoId: 1
+              equipoId: 123
+              posicion: 1
+              tipoObservacionId: 1
+              descripcion: "Se observa desgaste irregular en el hombro derecho del neumático"
+              usuarioCreacionId: 5
+      responses:
+        '201':
+          description: Observación creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservacionNeumaticoResponse'
+              example:
+                id: 3
+                neumaticoSummary:
+                  id: 1
+                  serieCodigo: "NEU-001-2023"
+                equipoId: 123
+                posicion: 1
+                tipoObservacionResponse:
+                  id: 1
+                  nombre: "Desgaste irregular"
+                  ambito: "Rodadura"
+                  descripcion: "Desgaste no uniforme en la banda de rodadura"
+                  activo: true
+                descripcion: "Se observa desgaste irregular en el hombro derecho del neumático"
+                estadoObservacionResponse:
+                  id: 1
+                  nombre: "Pendiente"
+                  descripcion: "Observación pendiente de resolución"
+                fechaCreacion: "2023-08-06 10:30:00"
+                userInfoResponseCreacion:
+                  id: 5
+                  name: "Carlos"
+                  lastName: "González"
+                  fullName: "Carlos González"
+                fechaResolucion: null
+                usuarioResolucionId: null
+                comentarioResolucion: null
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-VAL-001"
+                message: "descripcion es requerida y no puede estar vacía"
+                path: "/api/v1/observaciones-neumaticos"
+                timestamp: "2023-08-06 10:30:00"
+        '404':
+          description: Recurso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-NFE-001"
+                message: "Tipo de observación con ID 999 no encontrado"
+                path: "/api/v1/observaciones-neumaticos"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-CRE-001"
+                message: "Error al crear observación"
+                path: "/api/v1/observaciones-neumaticos"
+                timestamp: "2023-08-06 10:30:00"
+
+  /api/v1/observaciones-neumaticos/{observacionId}:
+    patch:
+      tags:
+        - observaciones
+      summary: Actualizar observación
+      description: Actualiza el estado, usuario de resolución y/o comentarios de una observación existente
+      operationId: updateObservacionNeumatico
+      parameters:
+        - name: observacionId
+          in: path
+          required: true
+          description: ID de la observación a actualizar
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObservacionNeumaticoUpdateRequest'
+            examples:
+              resolve_observation:
+                summary: Resolver observación
+                value:
+                  estadoObservacionId: 2
+                  usuarioResolucionId: 3
+                  comentarioResolucion: "Se realizó rotación del neumático para corregir el desgaste irregular"
+              add_comment_only:
+                summary: Agregar solo comentario
+                value:
+                  comentarioResolucion: "En seguimiento - revisar en próxima inspección"
+      responses:
+        '200':
+          description: Observación actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservacionNeumaticoResponse'
+              example:
+                id: 1
+                neumaticoSummary:
+                  id: 1
+                  serieCodigo: "NEU-001-2023"
+                equipoId: 123
+                posicion: 1
+                tipoObservacionResponse:
+                  id: 1
+                  nombre: "Desgaste irregular"
+                  ambito: "Rodadura"
+                  descripcion: "Desgaste no uniforme en la banda de rodadura"
+                  activo: true
+                descripcion: "Se observa desgaste irregular en el hombro derecho"
+                estadoObservacionResponse:
+                  id: 2
+                  nombre: "Resuelto"
+                  descripcion: "Observación resuelta satisfactoriamente"
+                fechaCreacion: "2023-08-01 10:30:00"
+                userInfoResponseCreacion:
+                  id: 5
+                  name: "Carlos"
+                  lastName: "González"
+                  fullName: "Carlos González"
+                fechaResolucion: "2023-08-06 10:30:00"
+                usuarioResolucionId: 3
+                comentarioResolucion: "Se realizó rotación del neumático para corregir el desgaste irregular"
+        '400':
+          description: Datos de entrada inválidos o reglas de negocio violadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Error de validación
+                  value:
+                    code: "TYR-VAL-001"
+                    message: "Debe proporcionar al menos un campo para actualizar"
+                    path: "/api/v1/observaciones-neumaticos/1"
+                    timestamp: "2023-08-06 10:30:00"
+                business_rule_error:
+                  summary: Error de regla de negocio
+                  value:
+                    code: "TYR-OBS-UPD-002"
+                    message: "No se puede cambiar el estado de una observación ya resuelta"
+                    path: "/api/v1/observaciones-neumaticos/1"
+                    timestamp: "2023-08-06 10:30:00"
+        '404':
+          description: Observación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-NFE-001"
+                message: "Observación con ID 999 no encontrada"
+                path: "/api/v1/observaciones-neumaticos/999"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-OBS-UPD-001"
+                message: "Error al actualizar observación"
+                path: "/api/v1/observaciones-neumaticos/1"
+                timestamp: "2023-08-06 10:30:00"
+
+components:
+  schemas:
+    NeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: ID único del neumático
+          example: 1
+        empresaId:
+          type: integer
+          format: int32
+          description: ID de la empresa
+          example: 1
+        catalogoNeumaticoResponse:
+          $ref: '#/components/schemas/CatalogoNeumaticoResponse'
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo al que pertenece
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          description: Posición del neumático en el equipo
+          example: 1
+        serieCodigo:
+          type: string
+          description: Código de serie del neumático
+          example: "NEU-001-2023"
+        costoInicial:
+          type: number
+          format: decimal
+          description: Costo inicial del neumático
+          example: 850.00
+        proveedorResponse:
+          $ref: '#/components/schemas/ProveedorResponse'
+        kmInstalacion:
+          type: integer
+          format: int32
+          description: Kilómetros al momento de instalación
+          example: 15000
+        fechaInstalacion:
+          type: string
+          format: date
+          description: Fecha de instalación
+          example: "2023-01-15"
+        rtd1:
+          type: number
+          format: decimal
+          description: Primera medición RTD
+          example: 18.2
+        rtd2:
+          type: number
+          format: decimal
+          description: Segunda medición RTD
+          example: 18.1
+        rtd3:
+          type: number
+          format: decimal
+          description: Tercera medición RTD
+          example: 18.0
+        rtdActual:
+          type: number
+          format: decimal
+          description: Medición RTD actual
+          example: 12.5
+        kmAcumulados:
+          type: integer
+          format: int32
+          description: Kilómetros acumulados
+          example: 75000
+        kmCicloActual:
+          type: integer
+          format: int32
+          description: Kilómetros del ciclo actual
+          example: 60000
+        numeroReencauches:
+          type: integer
+          format: int32
+          description: Número de reencauches
+          example: 1
+        disenoReencaucheResponse:
+          $ref: '#/components/schemas/DisenoReencaucheResponse'
+        clasificacionNeumaticoResponse:
+          $ref: '#/components/schemas/ClasificacionNeumaticoResponse'
+        rtdThresholds:
+          $ref: '#/components/schemas/RtdThresholdsResponse'
+        disenoVigente:
+          type: string
+          description: Diseño vigente del neumático
+          example: "IDY3"
+        estadoReencauche:
+          type: string
+          description: Estado del reencauche del neumático
+          example: "R1"
+
+    CatalogoNeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        marcaNeumaticoResponse:
+          $ref: '#/components/schemas/MarcaNeumaticoResponse'
+        medidaNeumaticoResponse:
+          $ref: '#/components/schemas/MedidaNeumaticoResponse'
+        modeloDiseno:
+          type: string
+          example: "M840"
+        tipoUso:
+          type: string
+          example: "Carretera"
+        rtdOriginal:
+          type: number
+          format: decimal
+          example: 18.5
+        presionMaximaPsi:
+          type: integer
+          format: int32
+          example: 120
+        treadwear:
+          type: integer
+          format: int32
+          example: 300
+        traccion:
+          type: string
+          example: "A"
+        temperatura:
+          type: string
+          example: "B"
+
+    MarcaNeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: "Bridgestone"
+
+    MedidaNeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        descripcion:
+          type: string
+          example: "11R22.5"
+        tipoConstruccion:
+          type: string
+          example: "Radial"
+        indiceCarga:
+          type: string
+          example: "146/143"
+        simboloVelocidad:
+          type: string
+          example: "L"
+        plyRating:
+          type: integer
+          format: int32
+          example: 16
+
+    ProveedorResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: "Proveedor ABC"
+        ruc:
+          type: string
+          example: "20123456789"
+
+    DisenoReencaucheResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombreDiseno:
+          type: string
+          example: "Highway Plus"
+        proveedorReencauche:
+          type: string
+          example: "Reencauches SA"
+
+    ClasificacionNeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: "Premium"
+        descripcion:
+          type: string
+          example: "Neumático de alta calidad"
+
+    RtdThresholdsResponse:
+      type: object
+      properties:
+        rtdMinimo:
+          type: number
+          format: decimal
+          example: 3.0
+        rtdMaximo:
+          type: number
+          format: decimal
+          example: 20.0
+
+    ObservacionNeumaticoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: ID único de la observación
+          example: 1
+        neumaticoSummary:
+          $ref: '#/components/schemas/NeumaticoSummaryResponse'
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          description: Posición del neumático en el equipo
+          example: 1
+        tipoObservacionResponse:
+          $ref: '#/components/schemas/TipoObservacionResponse'
+        descripcion:
+          type: string
+          description: Descripción detallada de la observación
+          example: "Se observa desgaste irregular en el hombro derecho"
+        estadoObservacionResponse:
+          $ref: '#/components/schemas/EstadoObservacionResponse'
+        fechaCreacion:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+          example: "2023-08-01 10:30:00"
+        userInfoResponseCreacion:
+          $ref: '#/components/schemas/UserInfoResponse'
+        fechaResolucion:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha y hora de resolución
+          example: "2023-08-02 14:15:00"
+        usuarioResolucionId:
+          type: integer
+          format: int32
+          nullable: true
+          description: ID del usuario que resolvió la observación
+          example: 3
+        comentarioResolucion:
+          type: string
+          nullable: true
+          description: Comentarios de resolución
+          example: "Se realizó rotación del neumático"
+
+    TipoObservacionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: "Desgaste irregular"
+        ambito:
+          type: string
+          example: "Rodadura"
+        descripcion:
+          type: string
+          example: "Desgaste no uniforme en la banda de rodadura"
+        activo:
+          type: boolean
+          example: true
+
+    EstadoObservacionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        nombre:
+          type: string
+          example: "Pendiente"
+        descripcion:
+          type: string
+          example: "Observación pendiente de resolución"
+
+    NeumaticoSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Identificador único del neumático
+          example: 1
+        serieCodigo:
+          type: string
+          description: Código de serie del neumático
+          example: "NEU-001-2023"
+
+    UserInfoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: "Juan"
+        lastName:
+          type: string
+          example: "Pérez"
+        fullName:
+          type: string
+          example: "Juan Pérez"
+
+    ObservacionNeumaticoNuevoRequest:
+      type: object
+      required:
+        - neumaticoId
+        - equipoId
+        - posicion
+        - tipoObservacionId
+        - descripcion
+        - usuarioCreacionId
+      properties:
+        neumaticoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del neumático
+          example: 1
+        equipoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del equipo
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Posición del neumático en el equipo
+          example: 1
+        tipoObservacionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del tipo de observación
+          example: 1
+        descripcion:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Descripción detallada de la observación
+          example: "Se observa desgaste irregular en el hombro derecho del neumático"
+        usuarioCreacionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del usuario que crea la observación
+          example: 5
+
+    ObservacionNeumaticoUpdateRequest:
+      type: object
+      properties:
+        estadoObservacionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del nuevo estado de la observación
+          example: 2
+        usuarioResolucionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del usuario que resuelve la observación
+          example: 3
+        comentarioResolucion:
+          type: string
+          maxLength: 1000
+          description: Comentarios sobre la resolución
+          example: "Se realizó rotación del neumático para corregir el desgaste irregular"
+
+    NeumaticoRequest:
+      type: object
+      required:
+        - empresaId
+        - catalogoNeumaticoId
+        - equipoId
+        - posicion
+        - serieCodigo
+        - costoInicial
+        - proveedorId
+        - kmInstalacion
+        - fechaInstalacion
+        - rtd1
+        - rtd2
+        - rtd3
+        - rtdActual
+        - kmAcumulados
+        - kmCicloActual
+        - numeroReencauches
+        - clasificacionNeumaticoId
+      properties:
+        empresaId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID de la empresa
+          example: 1
+        catalogoNeumaticoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del catálogo de neumático
+          example: 1
+        equipoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del equipo al que pertenece
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Posición del neumático en el equipo
+          example: 1
+        serieCodigo:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Código de serie del neumático
+          example: "NEU-001-2023"
+        costoInicial:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Costo inicial del neumático
+          example: 850.00
+        proveedorId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del proveedor
+          example: 1
+        kmInstalacion:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Kilómetros al momento de instalación
+          example: 15000
+        fechaInstalacion:
+          type: string
+          format: date
+          description: Fecha de instalación
+          example: "2023-01-15"
+        rtd1:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Primera medición RTD
+          example: 18.2
+        rtd2:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Segunda medición RTD
+          example: 18.1
+        rtd3:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Tercera medición RTD
+          example: 18.0
+        rtdActual:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Medición RTD actual
+          example: 12.5
+        kmAcumulados:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Kilómetros acumulados
+          example: 75000
+        kmCicloActual:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Kilómetros del ciclo actual
+          example: 60000
+        numeroReencauches:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Número de reencauches
+          example: 1
+        disenoReencaucheId:
+          type: integer
+          format: int32
+          nullable: true
+          description: ID del diseño de reencauche (opcional)
+          example: 1
+        clasificacionNeumaticoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID de la clasificación del neumático
+          example: 1
+        disenoVigente:
+          type: string
+          nullable: true
+          maxLength: 20
+          description: Diseño vigente del neumático
+          example: "IDY3"
+        estadoReencauche:
+          type: string
+          nullable: true
+          maxLength: 10
+          description: Estado del reencauche del neumático
+          example: "R1"
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Código de error único
+          example: "TYR-VAL-001"
+        message:
+          type: string
+          description: Mensaje descriptivo del error
+          example: "Parámetro inválido"
+        path:
+          type: string
+          description: Ruta del endpoint donde ocurrió el error
+          example: "/api/v1/neumaticos/equipo/123"
+        timestamp:
+          type: string
+          format: date-time
+          description: Fecha y hora del error
+          example: "2023-08-06 10:30:00"
