@@ -74,6 +74,8 @@ springdoc:
 app:
   cache:
     ttl-hours: 24
+    user-info:
+      ttl-hours: 48
     prefixes:
       catalogo-neumatico: "cache:catalogoNeumatico"
       proveedor: "cache:proveedor"
@@ -81,6 +83,7 @@ app:
       clasificacion-neumatico: "cache:clasificacionNeumatico"
       marca-neumatico: "cache:marcaNeumatico"
       medida-neumatico: "cache:medidaNeumatico"
+      user-info: "cache:userInfo"
 
 server:
   port: 8083

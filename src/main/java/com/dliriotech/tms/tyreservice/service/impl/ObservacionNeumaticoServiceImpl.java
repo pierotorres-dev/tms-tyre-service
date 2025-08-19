@@ -5,13 +5,14 @@ import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
 import com.dliriotech.tms.tyreservice.exception.ObservacionCreationException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionMasterDataException;
-import com.dliriotech.tms.tyreservice.exception.ObservacionNotFoundException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionProcessingException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.tyreservice.repository.MapaObservacionSolucionRepository;
 import com.dliriotech.tms.tyreservice.repository.ObservacionNeumaticoRepository;
 import com.dliriotech.tms.tyreservice.service.ObservacionMasterDataCacheService;
 import com.dliriotech.tms.tyreservice.service.ObservacionNeumaticoService;
+import com.dliriotech.tms.tyreservice.service.UserEntityCacheService;
+import com.dliriotech.tms.tyreservice.service.NeumaticoEntityCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,8 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
     private final MapaObservacionSolucionRepository mapaObservacionSolucionRepository;
     private final ObservacionNeumaticoRepository observacionNeumaticoRepository;
     private final ObservacionMasterDataCacheService observacionMasterDataCacheService;
+    private final UserEntityCacheService userEntityCacheService;
+    private final NeumaticoEntityCacheService neumaticoEntityCacheService;
 
     @Override
     public Flux<ObservacionNeumaticoResponse> getAllObservacionesByNeumaticoIdAndTipoMovimientoId(Integer neumaticoId, Integer tipoMovimientoId) {
@@ -358,10 +361,39 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                     .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(EstadoObservacionResponse.builder().build());
 
+        // Obtener información del usuario que creó la observación usando cache
+        Mono<UserInfoResponse> usuarioInfoMono = observacion.getUsuarioCreacionId() != null ?
+                userEntityCacheService.getUserInfo(observacion.getUsuarioCreacionId())
+                        .doOnNext(userInfo -> log.info("Información de usuario {} obtenida para observación {}",
+                                observacion.getUsuarioCreacionId(), observacion.getId()))
+                        .onErrorResume(error -> {
+                            log.warn("Error al obtener información del usuario {} para observación {}: {}",
+                                    observacion.getUsuarioCreacionId(), observacion.getId(), error.getMessage());
+                            return Mono.empty();
+                        })
+                        .subscribeOn(Schedulers.boundedElastic()) :
+                Mono.empty();
+
+        // Obtener información resumida del neumático usando cache
+        Mono<NeumaticoSummaryResponse> neumaticoSummaryMono = observacion.getNeumaticoId() != null ?
+                neumaticoEntityCacheService.getNeumaticoSummary(observacion.getNeumaticoId())
+                        .doOnNext(neumaticoSummary -> log.debug("Información de neumático {} obtenida para observación {}",
+                                observacion.getNeumaticoId(), observacion.getId()))
+                        .onErrorResume(error -> {
+                            log.warn("Error al obtener información del neumático {} para observación {}: {}",
+                                    observacion.getNeumaticoId(), observacion.getId(), error.getMessage());
+                            return Mono.just(NeumaticoSummaryResponse.builder()
+                                    .id(observacion.getNeumaticoId())
+                                    .serieCodigo("N/A")
+                                    .build());
+                        })
+                        .subscribeOn(Schedulers.boundedElastic()) :
+                Mono.just(NeumaticoSummaryResponse.builder().build());
+
         // Combinar los resultados
-        return Mono.zip(tipoObservacionMono, estadoObservacionMono)
+        return Mono.zip(tipoObservacionMono, estadoObservacionMono, usuarioInfoMono, neumaticoSummaryMono)
                 .flatMap(tuple -> 
-                    Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2()))
+                    Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2(), tuple.getT3(), tuple.getT4()))
                         .subscribeOn(Schedulers.boundedElastic())
                 )
                 .onErrorMap(error -> ObservacionProcessingException.enrichmentError(observacion.getId().toString(), error));
@@ -370,18 +402,20 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
     private ObservacionNeumaticoResponse mapEntityToResponse(
             ObservacionNeumatico entity,
             TipoObservacionResponse tipoObservacionResponse,
-            EstadoObservacionResponse estadoObservacionResponse) {
+            EstadoObservacionResponse estadoObservacionResponse,
+            UserInfoResponse usuarioInfo,
+            NeumaticoSummaryResponse neumaticoSummary) {
         
         return ObservacionNeumaticoResponse.builder()
                 .id(entity.getId())
-                .neumaticoId(entity.getNeumaticoId())
+                .neumaticoSummary(neumaticoSummary.getId() != null ? neumaticoSummary : null)
                 .equipoId(entity.getEquipoId())
                 .posicion(entity.getPosicion())
                 .tipoObservacionResponse(tipoObservacionResponse.getId() != null ? tipoObservacionResponse : null)
                 .descripcion(entity.getDescripcion())
                 .estadoObservacionResponse(estadoObservacionResponse.getId() != null ? estadoObservacionResponse : null)
                 .fechaCreacion(entity.getFechaCreacion())
-                .usuarioCreacionId(entity.getUsuarioCreacionId())
+                .userInfoResponseCreacion(usuarioInfo)
                 .fechaResolucion(entity.getFechaResolucion())
                 .usuarioResolucionId(entity.getUsuarioResolucionId())
                 .comentarioResolucion(entity.getComentarioResolucion())

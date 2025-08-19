@@ -15,7 +15,11 @@ import java.time.LocalDateTime;
 public class ObservacionNeumaticoResponse {
     private Integer id;
 
-    private Integer neumaticoId;
+    /**
+     * Información resumida del neumático asociado a la observación.
+     * Contiene id y código de serie del neumático.
+     */
+    private NeumaticoSummaryResponse neumaticoSummary;
 
     private Integer equipoId;
 
@@ -30,7 +34,7 @@ public class ObservacionNeumaticoResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaCreacion;
 
-    private Integer usuarioCreacionId;
+    private UserInfoResponse userInfoResponseCreacion;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaResolucion;

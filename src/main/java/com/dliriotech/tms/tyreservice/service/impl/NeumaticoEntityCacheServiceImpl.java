@@ -28,6 +28,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
     private final ClasificacionNeumaticoRepository clasificacionNeumaticoRepository;
     private final MarcaNeumaticoRepository marcaNeumaticoRepository;
     private final MedidaNeumaticoRepository medidaNeumaticoRepository;
+    private final NeumaticoRepository neumaticoRepository;
 
     @Value("${app.cache.ttl-hours:24}")
     private long cacheTtlHours;
@@ -49,6 +50,9 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
 
     @Value("${app.cache.prefixes.medida-neumatico:cache:medidaNeumatico}")
     private String medidaCachePrefix;
+
+    @Value("${app.cache.prefixes.neumatico-summary:cache:neumaticoSummary}")
+    private String neumaticoSummaryCachePrefix;
 
     @Override
     public Mono<CatalogoNeumaticoResponse> getCatalogoNeumatico(Integer catalogoId) {
@@ -173,6 +177,29 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
     }
 
     @Override
+    public Mono<NeumaticoSummaryResponse> getNeumaticoSummary(Integer neumaticoId) {
+        String cacheKey = buildCacheKey(neumaticoSummaryCachePrefix, neumaticoId);
+        
+        return getCachedEntity(cacheKey, NeumaticoSummaryResponse.class)
+                .switchIfEmpty(neumaticoRepository.findById(neumaticoId)
+                        .switchIfEmpty(Mono.error(new NeumaticoNotFoundException(neumaticoId.toString())))
+                        .map(neumatico -> NeumaticoSummaryResponse.builder()
+                                .id(neumatico.getId())
+                                .serieCodigo(neumatico.getSerieCodigo())
+                                .build())
+                        .flatMap(neumaticoSummary -> cacheEntity(cacheKey, neumaticoSummary)
+                                .thenReturn(neumaticoSummary))
+                        .onErrorMap(throwable -> {
+                            if (throwable instanceof NeumaticoNotFoundException) {
+                                return throwable;
+                            }
+                            return new CacheOperationException("obtener resumen de neumático", throwable.getMessage(), throwable);
+                        }))
+                .doOnSuccess(neumatico -> log.debug("Resumen de neumático {} obtenido desde cache/DB", neumaticoId))
+                .doOnError(error -> log.error("Error al obtener resumen de neumático {}: {}", neumaticoId, error.getMessage()));
+    }
+
+    @Override
     public Mono<Void> invalidateCatalogoNeumatico(Integer catalogoId) {
         String cacheKey = buildCacheKey(catalogoCachePrefix, catalogoId);
         return redisTemplate.delete(cacheKey)
@@ -217,6 +244,14 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         String cacheKey = buildCacheKey(medidaCachePrefix, medidaId);
         return redisTemplate.delete(cacheKey)
                 .doOnSuccess(result -> log.debug("Cache invalidado para medida de neumático {}", medidaId))
+                .then();
+    }
+
+    @Override
+    public Mono<Void> invalidateNeumaticoSummary(Integer neumaticoId) {
+        String cacheKey = buildCacheKey(neumaticoSummaryCachePrefix, neumaticoId);
+        return redisTemplate.delete(cacheKey)
+                .doOnSuccess(result -> log.debug("Cache invalidado para resumen de neumático {}", neumaticoId))
                 .then();
     }
 

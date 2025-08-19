@@ -17,6 +17,12 @@ public interface NeumaticoEntityCacheService {
     
     Mono<MedidaNeumaticoResponse> getMedidaNeumatico(Integer medidaId);
     
+    /**
+     * Obtiene información resumida de un neumático (id y serie).
+     * Utilizado cuando solo se necesitan datos básicos del neumático.
+     */
+    Mono<NeumaticoSummaryResponse> getNeumaticoSummary(Integer neumaticoId);
+    
     // Métodos para invalidar cache
     Mono<Void> invalidateCatalogoNeumatico(Integer catalogoId);
     
@@ -29,4 +35,9 @@ public interface NeumaticoEntityCacheService {
     Mono<Void> invalidateMarcaNeumatico(Integer marcaId);
     
     Mono<Void> invalidateMedidaNeumatico(Integer medidaId);
+    
+    /**
+     * Invalida el cache de información resumida de un neumático.
+     */
+    Mono<Void> invalidateNeumaticoSummary(Integer neumaticoId);
 }

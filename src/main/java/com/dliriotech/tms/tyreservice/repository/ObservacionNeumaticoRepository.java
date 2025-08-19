@@ -24,7 +24,10 @@ public interface ObservacionNeumaticoRepository extends ReactiveCrudRepository<O
             Integer estadoObservacionId
     );
 
-    @Query("SELECT * FROM observaciones_neumatico AS obs " +
+    @Query("SELECT obs.id, obs.id_neumatico, obs.id_equipo, obs.posicion, obs.id_tipo_observacion, " +
+            "obs.descripcion, obs.id_estado_observacion, obs.fecha_creacion, obs.id_usuario_creacion, " +
+            "obs.fecha_resolucion, obs.id_usuario_resolucion, obs.comentario_resolucion " +
+            "FROM observaciones_neumatico AS obs " +
             "JOIN neumaticos AS neu ON obs.id_neumatico = neu.id " +
             "WHERE neu.id_equipo = :equipoId AND obs.id_estado_observacion = :estadoId")
     Flux<ObservacionNeumatico> findByEquipoIdAndEstadoObservacionId(Integer equipoId, Integer estadoId);

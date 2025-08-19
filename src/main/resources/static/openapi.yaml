@@ -165,7 +165,9 @@ paths:
                   summary: Respuesta exitosa con observaciones
                   value:
                     - id: 1
-                      neumaticoId: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
                       equipoId: 123
                       posicion: 1
                       tipoObservacionResponse:
@@ -180,7 +182,11 @@ paths:
                         nombre: "Pendiente"
                         descripcion: "Observación pendiente de resolución"
                       fechaCreacion: "2023-08-01 10:30:00"
-                      usuarioCreacionId: 5
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
                       fechaResolucion: null
                       usuarioResolucionId: null
                       comentarioResolucion: null
@@ -249,7 +255,9 @@ paths:
                   summary: Todas las observaciones
                   value:
                     - id: 1
-                      neumaticoId: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
                       equipoId: 123
                       posicion: 1
                       tipoObservacionResponse:
@@ -264,12 +272,18 @@ paths:
                         nombre: "Resuelto"
                         descripcion: "Observación resuelta satisfactoriamente"
                       fechaCreacion: "2023-08-01 10:30:00"
-                      usuarioCreacionId: 5
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
                       fechaResolucion: "2023-08-02 14:15:00"
                       usuarioResolucionId: 3
                       comentarioResolucion: "Se realizó rotación del neumático"
                     - id: 2
-                      neumaticoId: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
                       equipoId: 123
                       posicion: 1
                       tipoObservacionResponse:
@@ -284,7 +298,11 @@ paths:
                         nombre: "Pendiente"
                         descripcion: "Observación pendiente de resolución"
                       fechaCreacion: "2023-08-05 09:20:00"
-                      usuarioCreacionId: 4
+                      userInfoResponseCreacion:
+                        id: 4
+                        name: "Ana"
+                        lastName: "Martínez"
+                        fullName: "Ana Martínez"
                       fechaResolucion: null
                       usuarioResolucionId: null
                       comentarioResolucion: null
@@ -292,7 +310,9 @@ paths:
                   summary: Solo observaciones pendientes
                   value:
                     - id: 2
-                      neumaticoId: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
                       equipoId: 123
                       posicion: 1
                       tipoObservacionResponse:
@@ -307,7 +327,11 @@ paths:
                         nombre: "Pendiente"
                         descripcion: "Observación pendiente de resolución"
                       fechaCreacion: "2023-08-05 09:20:00"
-                      usuarioCreacionId: 4
+                      userInfoResponseCreacion:
+                        id: 4
+                        name: "Ana"
+                        lastName: "Martínez"
+                        fullName: "Ana Martínez"
                       fechaResolucion: null
                       usuarioResolucionId: null
                       comentarioResolucion: null
@@ -368,7 +392,9 @@ paths:
                   summary: Respuesta exitosa con observaciones pendientes
                   value:
                     - id: 1
-                      neumaticoId: 1
+                      neumaticoSummary:
+                        id: 1
+                        serieCodigo: "NEU-001-2023"
                       equipoId: 123
                       posicion: 1
                       tipoObservacionResponse:
@@ -383,12 +409,18 @@ paths:
                         nombre: "Pendiente"
                         descripcion: "Observación pendiente de resolución"
                       fechaCreacion: "2023-08-01 10:30:00"
-                      usuarioCreacionId: 5
+                      userInfoResponseCreacion:
+                        id: 5
+                        name: "Carlos"
+                        lastName: "González"
+                        fullName: "Carlos González"
                       fechaResolucion: null
                       usuarioResolucionId: null
                       comentarioResolucion: null
                     - id: 3
-                      neumaticoId: 2
+                      neumaticoSummary:
+                        id: 2
+                        serieCodigo: "NEU-002-2023"
                       equipoId: 123
                       posicion: 2
                       tipoObservacionResponse:
@@ -403,7 +435,11 @@ paths:
                         nombre: "Pendiente"
                         descripcion: "Observación pendiente de resolución"
                       fechaCreacion: "2023-08-05 14:30:00"
-                      usuarioCreacionId: 6
+                      userInfoResponseCreacion:
+                        id: 6
+                        name: "Luis"
+                        lastName: "Rodríguez"
+                        fullName: "Luis Rodríguez"
                       fechaResolucion: null
                       usuarioResolucionId: null
                       comentarioResolucion: null
@@ -462,7 +498,9 @@ paths:
                 $ref: '#/components/schemas/ObservacionNeumaticoResponse'
               example:
                 id: 3
-                neumaticoId: 1
+                neumaticoSummary:
+                  id: 1
+                  serieCodigo: "NEU-001-2023"
                 equipoId: 123
                 posicion: 1
                 tipoObservacionResponse:
@@ -477,7 +515,11 @@ paths:
                   nombre: "Pendiente"
                   descripcion: "Observación pendiente de resolución"
                 fechaCreacion: "2023-08-06 10:30:00"
-                usuarioCreacionId: 5
+                userInfoResponseCreacion:
+                  id: 5
+                  name: "Carlos"
+                  lastName: "González"
+                  fullName: "Carlos González"
                 fechaResolucion: null
                 usuarioResolucionId: null
                 comentarioResolucion: null
@@ -558,7 +600,9 @@ paths:
                 $ref: '#/components/schemas/ObservacionNeumaticoResponse'
               example:
                 id: 1
-                neumaticoId: 1
+                neumaticoSummary:
+                  id: 1
+                  serieCodigo: "NEU-001-2023"
                 equipoId: 123
                 posicion: 1
                 tipoObservacionResponse:
@@ -573,7 +617,11 @@ paths:
                   nombre: "Resuelto"
                   descripcion: "Observación resuelta satisfactoriamente"
                 fechaCreacion: "2023-08-01 10:30:00"
-                usuarioCreacionId: 5
+                userInfoResponseCreacion:
+                  id: 5
+                  name: "Carlos"
+                  lastName: "González"
+                  fullName: "Carlos González"
                 fechaResolucion: "2023-08-06 10:30:00"
                 usuarioResolucionId: 3
                 comentarioResolucion: "Se realizó rotación del neumático para corregir el desgaste irregular"
@@ -852,11 +900,8 @@ components:
           format: int32
           description: ID único de la observación
           example: 1
-        neumaticoId:
-          type: integer
-          format: int32
-          description: ID del neumático observado
-          example: 1
+        neumaticoSummary:
+          $ref: '#/components/schemas/NeumaticoSummaryResponse'
         equipoId:
           type: integer
           format: int32
@@ -880,11 +925,8 @@ components:
           format: date-time
           description: Fecha y hora de creación
           example: "2023-08-01 10:30:00"
-        usuarioCreacionId:
-          type: integer
-          format: int32
-          description: ID del usuario que creó la observación
-          example: 5
+        userInfoResponseCreacion:
+          $ref: '#/components/schemas/UserInfoResponse'
         fechaResolucion:
           type: string
           format: date-time
@@ -936,6 +978,36 @@ components:
         descripcion:
           type: string
           example: "Observación pendiente de resolución"
+
+    NeumaticoSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Identificador único del neumático
+          example: 1
+        serieCodigo:
+          type: string
+          description: Código de serie del neumático
+          example: "NEU-001-2023"
+
+    UserInfoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: "Juan"
+        lastName:
+          type: string
+          example: "Pérez"
+        fullName:
+          type: string
+          example: "Juan Pérez"
 
     ObservacionNeumaticoNuevoRequest:
       type: object
