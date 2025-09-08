@@ -72,8 +72,8 @@ public class MovimientoNeumatico {
     @Column("costo_movimiento")
     private BigDecimal costoMovimiento;
 
-    @Column("proveedor_servicio")
-    private String proveedorServicio;
+    @Column("id_proveedor_servicio")
+    private Integer proveedorServicioId;
 
     @Column("comentario")
     private String comentario;

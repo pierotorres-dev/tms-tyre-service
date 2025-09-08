@@ -18,5 +18,7 @@ public class Proveedor {
 
     private String nombre;
 
+    private String tipo;
+
     private String ruc;
 }

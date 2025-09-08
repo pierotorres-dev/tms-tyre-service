@@ -14,5 +14,7 @@ public class ProveedorResponse {
 
     private String nombre;
 
+    private String tipo;
+
     private String ruc;
 }

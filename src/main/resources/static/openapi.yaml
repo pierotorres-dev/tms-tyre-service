@@ -848,6 +848,9 @@ components:
         nombre:
           type: string
           example: "Proveedor ABC"
+        tipo:
+          type: string
+          example: "Proveedor Servicios"
         ruc:
           type: string
           example: "20123456789"

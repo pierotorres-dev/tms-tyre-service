@@ -2,7 +2,6 @@ package com.dliriotech.tms.tyreservice.controller;
 
 import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
-import com.dliriotech.tms.tyreservice.service.ObservacionNeumaticoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -85,6 +85,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
                                 .id(proveedor.getId())
                                 .nombre(proveedor.getNombre())
                                 .ruc(proveedor.getRuc())
+                                .tipo(proveedor.getTipo())
                                 .build())
                         .flatMap(proveedorResponse -> cacheEntity(cacheKey, proveedorResponse)
                                 .thenReturn(proveedorResponse))
