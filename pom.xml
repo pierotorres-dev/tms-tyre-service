@@ -49,9 +49,9 @@
 
 		<!-- 1. Spring Data R2DBC + MySQL reactivo -->
 		<dependency>
-			<groupId>dev.miku</groupId>
+			<groupId>io.asyncer</groupId>
 			<artifactId>r2dbc-mysql</artifactId>
-			<version>0.8.2.RELEASE</version>
+			<version>1.0.5</version>
 		</dependency>
 
 		<!-- 2. Lombok (opcional, para reducir boilerplate) -->

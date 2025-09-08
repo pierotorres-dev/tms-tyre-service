@@ -51,8 +51,17 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         // Buscar el handler más específico (evaluando desde las clases más específicas hacia las generales)
         ErrorDetails errorDetails = null;
         
-        // Excepciones específicas primero - Observaciones
-        if (error instanceof ObservacionUpdateException) {
+        // Excepciones específicas primero - Inspecciones
+        if (error instanceof InspeccionProcessingException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        else if (error instanceof RtdInvalidIncrementException) {
+            BaseException baseEx = (BaseException) error;
+            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
+        }
+        // Excepciones específicas - Observaciones
+        else if (error instanceof ObservacionUpdateException) {
             BaseException baseEx = (BaseException) error;
             errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
         }
