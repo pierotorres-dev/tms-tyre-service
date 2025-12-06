@@ -402,7 +402,7 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
 
     private Mono<BigDecimal> obtenerCostoMovimiento(FinalizarInspeccionRequest request) {
         return obtenerTipoMovimientoInspeccion()
-            .flatMap(tipoMovimientoId -> 
+            .flatMap(tipoMovimientoId ->
                 masterDataCacheService.getCatalogoServiciosEmpresa(
                     request.getEmpresaId(),
                     request.getTipoEquipoId(),
@@ -410,7 +410,7 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
                 ))
             .map(CatalogoServiciosEmpresa::getCostoServicio)
             .onErrorReturn(BigDecimal.ZERO) // Costo 0 si no se encuentra configuración
-            .doOnNext(costo -> log.debug("Costo de movimiento obtenido: {}", costo));
+            .doOnNext(costo -> log.info("Costo de movimiento obtenido: {}", costo));
     }
 
     private Mono<Void> procesarObservaciones(NeumaticoInspeccionadoRequest neumaticoRequest, 

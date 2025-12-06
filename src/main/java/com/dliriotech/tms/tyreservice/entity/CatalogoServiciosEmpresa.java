@@ -32,5 +32,5 @@ public class CatalogoServiciosEmpresa {
     @Column("costo_servicio")
     private BigDecimal costoServicio;
     
-    private String descripcion;
+    private Boolean activo;
 }

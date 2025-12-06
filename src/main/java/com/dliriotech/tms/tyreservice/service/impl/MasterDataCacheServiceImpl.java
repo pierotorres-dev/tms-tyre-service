@@ -135,12 +135,12 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
                                 .map(TipoMovimientoNeumatico::getId)
                                 .flatMap(id -> cacheEntity(cacheKey, id, MASTER_DATA_TTL)
                                         .thenReturn(id))
-                                .doOnSuccess(id -> log.debug("ID de tipo movimiento para '{}' cargado desde BD y cacheado: {}",
+                                .doOnSuccess(id -> log.info("ID de tipo movimiento para '{}' cargado desde BD y cacheado: {}",
                                         nombre, id))
                                 .switchIfEmpty(Mono.error(new NeumaticoException("404",
                                         "No se encontró tipo de movimiento con nombre: " + nombre)))
                 )
-                .doOnNext(id -> log.debug("ID de tipo movimiento para '{}' obtenido desde cache: {}", nombre, id))
+                .doOnNext(id -> log.info("ID de tipo movimiento para '{}' obtenido desde cache: {}", nombre, id))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -154,10 +154,10 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
                             empresaId, tipoEquipoId, tipoMovimientoId)
                             .flatMap(catalogo -> cacheEntity(cacheKey, catalogo, MASTER_DATA_TTL)
                                     .thenReturn(catalogo))
-                            .doOnSuccess(catalogo -> log.debug("Catálogo servicios empresa {} - tipo {} - movimiento {} cargado desde BD", 
+                            .doOnSuccess(catalogo -> log.info("Catálogo servicios empresa {} - tipo {} - movimiento {} cargado desde BD",
                                     empresaId, tipoEquipoId, tipoMovimientoId))
                 )
-                .doOnNext(catalogo -> log.debug("Catálogo servicios empresa {} - tipo {} - movimiento {} obtenido desde cache", 
+                .doOnNext(catalogo -> log.info("Catálogo servicios empresa {} - tipo {} - movimiento {} obtenido desde cache",
                         empresaId, tipoEquipoId, tipoMovimientoId))
                 .subscribeOn(Schedulers.boundedElastic());
     }

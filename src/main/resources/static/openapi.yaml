@@ -18,6 +18,8 @@ tags:
     description: Operaciones relacionadas con neumáticos
   - name: observaciones
     description: Operaciones relacionadas con observaciones de neumáticos
+  - name: inspecciones
+    description: Operaciones relacionadas con inspecciones de neumáticos
 
 paths:
   /api/v1/neumaticos/equipo/{equipoId}:
@@ -669,6 +671,65 @@ paths:
                 path: "/api/v1/observaciones-neumaticos/1"
                 timestamp: "2023-08-06 10:30:00"
 
+  /api/v1/movimientos-neumaticos/{equipoId}/inspecciones:
+    post:
+      tags:
+        - inspecciones
+      summary: Finalizar inspección de neumáticos
+      description: Finaliza una inspección de neumáticos para un equipo específico, actualizando las mediciones RTD y registrando observaciones
+      operationId: finalizarInspeccion
+      parameters:
+        - name: equipoId
+          in: path
+          required: true
+          description: ID del equipo inspeccionado
+          schema:
+            type: integer
+            minimum: 1
+          example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizarInspeccionRequest'
+      responses:
+        '204':
+          description: Inspección finalizada exitosamente
+        '400':
+          description: Datos de entrada inválidos o reglas de negocio violadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-INS-VAL-001"
+                message: "Datos de inspección inválidos"
+                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                timestamp: "2023-08-06 10:30:00"
+        '404':
+          description: Equipo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-EQU-NOT-001"
+                message: "Equipo con ID 123 no encontrado"
+                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                timestamp: "2023-08-06 10:30:00"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "TYR-INS-OPE-001"
+                message: "Error al procesar inspección"
+                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                timestamp: "2023-08-06 10:30:00"
+
 components:
   schemas:
     NeumaticoResponse:
@@ -1241,3 +1302,80 @@ components:
           format: date-time
           description: Fecha y hora del error
           example: "2023-08-06 10:30:00"
+
+    FinalizarInspeccionRequest:
+      type: object
+      required:
+        - usuarioId
+        - empresaId
+        - tipoEquipoId
+        - kilometraje
+        - neumaticosInspeccionados
+      properties:
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo (será sobrescrito por el parámetro de la URL)
+          example: 123
+        usuarioId:
+          type: integer
+          format: int32
+          description: ID del usuario que realiza la inspección
+          example: 5
+        empresaId:
+          type: integer
+          format: int32
+          description: ID de la empresa
+          example: 1
+        tipoEquipoId:
+          type: integer
+          format: int32
+          description: ID del tipo de equipo
+          example: 2
+        kilometraje:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Kilometraje actual del equipo
+          example: 185000
+        neumaticosInspeccionados:
+          type: array
+          description: Lista de neumáticos inspeccionados
+          items:
+            $ref: '#/components/schemas/NeumaticoInspeccionadoRequest'
+
+    NeumaticoInspeccionadoRequest:
+      type: object
+      required:
+        - rtd1
+        - rtd2
+        - rtd3
+      properties:
+        neumaticoId:
+          type: integer
+          format: int32
+          description: ID del neumático inspeccionado
+          example: 1
+        rtd1:
+          type: number
+          format: decimal
+          minimum: 0.0
+          description: Primera medición RTD (máximo 3 enteros y 2 decimales)
+          example: 15.25
+        rtd2:
+          type: number
+          format: decimal
+          minimum: 0.0
+          description: Segunda medición RTD (máximo 3 enteros y 2 decimales)
+          example: 15.18
+        rtd3:
+          type: number
+          format: decimal
+          minimum: 0.0
+          description: Tercera medición RTD (máximo 3 enteros y 2 decimales)
+          example: 15.32
+        observacionNeumaticoList:
+          type: array
+          description: Lista de observaciones encontradas durante la inspección
+          items:
+            $ref: '#/components/schemas/ObservacionNeumaticoNuevoRequest'
