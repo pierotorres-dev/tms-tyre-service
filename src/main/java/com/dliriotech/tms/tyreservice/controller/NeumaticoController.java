@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.controller;
 
+import com.dliriotech.tms.tyreservice.constants.HeaderConstants;
 import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.service.NeumaticoService;
 import jakarta.validation.Valid;
@@ -18,21 +19,25 @@ public class NeumaticoController {
     private final NeumaticoService neumaticoService;
 
     @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(@PathVariable Integer equipoId) {
-        return neumaticoService.getAllNeumaticosByEquipoId(equipoId);
+    public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(
+            @PathVariable Integer equipoId,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId) {
+        return neumaticoService.getAllNeumaticosByEquipoId(equipoId, empresaId);
     }
 
-    //TODO: Improve this method
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<NeumaticoResponse> createNeumatico(@Valid @RequestBody NeumaticoRequest request) {
-        return neumaticoService.saveNeumatico(request);
+    public Mono<NeumaticoResponse> createNeumatico(
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId,
+            @Valid @RequestBody NeumaticoRequest request) {
+        return neumaticoService.saveNeumatico(request, empresaId);
     }
 
-    //TODO: Improve this method
     @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<NeumaticoResponse> updateNeumatico(@PathVariable Integer id, 
-                                                   @Valid @RequestBody NeumaticoRequest request) {
-        return neumaticoService.updateNeumatico(id, request);
+    public Mono<NeumaticoResponse> updateNeumatico(
+            @PathVariable Integer id,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId,
+            @Valid @RequestBody NeumaticoRequest request) {
+        return neumaticoService.updateNeumatico(id, request, empresaId);
     }
 }

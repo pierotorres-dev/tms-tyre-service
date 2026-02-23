@@ -186,6 +186,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
                         .switchIfEmpty(Mono.error(new NeumaticoNotFoundException(neumaticoId.toString())))
                         .map(neumatico -> NeumaticoSummaryResponse.builder()
                                 .id(neumatico.getId())
+                                .empresaId(neumatico.getEmpresaId())
                                 .serieCodigo(neumatico.getSerieCodigo())
                                 .build())
                         .flatMap(neumaticoSummary -> cacheEntity(cacheKey, neumaticoSummary)

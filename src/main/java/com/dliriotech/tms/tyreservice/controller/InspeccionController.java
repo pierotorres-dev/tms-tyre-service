@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.controller;
 
+import com.dliriotech.tms.tyreservice.constants.HeaderConstants;
 import com.dliriotech.tms.tyreservice.dto.FinalizarInspeccionRequest;
 import com.dliriotech.tms.tyreservice.service.InspeccionNeumaticoService;
 import jakarta.validation.Valid;
@@ -26,26 +27,17 @@ public class InspeccionController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> finalizarInspeccion(
             @PathVariable Integer equipoId,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId,
             @Valid @RequestBody FinalizarInspeccionRequest request) {
         
         log.info("Solicitud de finalización de inspección recibida para equipo: {}", equipoId);
         
-        // Solo validación de coherencia HTTP - el equipoId del path prevalece sobre el del body
-        return validarCoherenciaHttpRequest(equipoId, request)
-            .then(inspeccionNeumaticoService.finalizarInspeccion(equipoId, request))
+        // El equipoId del path prevalece sobre el del body
+        request.setEquipoId(equipoId);
+
+        return inspeccionNeumaticoService.finalizarInspeccion(equipoId, empresaId, request)
             .doOnSuccess(result -> log.info("Inspección finalizada exitosamente para equipo: {}", equipoId))
             .doOnError(error -> log.error("Error al procesar inspección para equipo {}: {}", 
                 equipoId, error.getMessage()));
-    }
-
-    /**
-     * Validación de coherencia HTTP únicamente.
-     */
-    private Mono<Void> validarCoherenciaHttpRequest(Integer equipoId, FinalizarInspeccionRequest request) {
-        // Establecemos el equipoId del path en el request para garantizar coherencia
-        // Esta es una responsabilidad del controller: garantizar coherencia entre URL y body
-        request.setEquipoId(equipoId);
-        
-        return Mono.empty();
     }
 }

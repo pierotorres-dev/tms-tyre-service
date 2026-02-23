@@ -51,11 +51,13 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
 
     @Override
     @Transactional
-    public Mono<Void> finalizarInspeccion(Integer equipoId, FinalizarInspeccionRequest request) {
+    public Mono<Void> finalizarInspeccion(Integer equipoId, Integer empresaId, FinalizarInspeccionRequest request) {
         log.info("Iniciando finalización de inspección transaccional para equipo: {}", equipoId);
-        
+        // El empresaId del header prevalece sobre el del body
+        request.setEmpresaId(empresaId);
+
         return validarDatosEntrada(equipoId, request)
-            .then(ejecutarInspeccionTransaccional(equipoId, request))
+            .then(ejecutarInspeccionTransaccional(equipoId, empresaId, request))
             .doOnSuccess(result -> log.info("Inspección finalizada exitosamente para equipo: {}", equipoId))
             .onErrorMap(throwable -> {
                 if (throwable instanceof InspeccionProcessingException) {
@@ -110,11 +112,11 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
     /**
      * Ejecuta la inspección completa de forma transaccional
      */
-    private Mono<Void> ejecutarInspeccionTransaccional(Integer equipoId, FinalizarInspeccionRequest request) {
+    private Mono<Void> ejecutarInspeccionTransaccional(Integer equipoId, Integer empresaId, FinalizarInspeccionRequest request) {
         return validarEquipoExiste(equipoId)
-            .then(validarRtdNoIncremento(equipoId, request))
+            .then(validarRtdNoIncremento(equipoId, empresaId, request))
             .then(actualizarFechaInspeccionEquipo(equipoId))
-            .then(procesarNeumaticosinspeccionados(request))
+            .then(procesarNeumaticosinspeccionados(request, empresaId))
             .onErrorMap(throwable -> {
                 if (throwable instanceof InspeccionProcessingException) {
                     return throwable;
@@ -163,11 +165,11 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
      * Valida que ningún RTD actual calculado sea mayor al RTD actual existente.
      * Regla de negocio: El RTD (profundidad de rodadura) solo puede disminuir con el uso, nunca aumentar.
      */
-    private Mono<Void> validarRtdNoIncremento(Integer equipoId, FinalizarInspeccionRequest request) {
+    private Mono<Void> validarRtdNoIncremento(Integer equipoId, Integer empresaId, FinalizarInspeccionRequest request) {
         log.debug("Validando que RTD no incremente para equipo: {}", equipoId);
         
-        // Obtener todos los neumáticos actuales del equipo
-        return neumaticoRepository.getAllByEquipoIdOrderByPosicionDesc(equipoId)
+        // Obtener todos los neumáticos del equipo filtrados por empresa (tenant isolation)
+        return neumaticoRepository.getAllByEquipoIdAndEmpresaIdOrderByPosicionDesc(equipoId, empresaId)
             .collectMap(Neumatico::getId) // Crear un mapa por ID para búsqueda eficiente
             .flatMap(neumaticosExistentes -> {
                 // Validar cada neumático inspeccionado
@@ -243,20 +245,21 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
             });
     }
 
-    private Mono<Void> procesarNeumaticosinspeccionados(FinalizarInspeccionRequest request) {
+    private Mono<Void> procesarNeumaticosinspeccionados(FinalizarInspeccionRequest request, Integer empresaId) {
         return Flux.fromIterable(request.getNeumaticosInspeccionados())
-            .flatMap(neumatico -> procesarNeumaticoIndividual(neumatico, request))
+            .flatMap(neumatico -> procesarNeumaticoIndividual(neumatico, request, empresaId))
             .then();
     }
 
-    private Mono<Void> procesarNeumaticoIndividual(NeumaticoInspeccionadoRequest neumaticoRequest, 
-                                                   FinalizarInspeccionRequest request) {
+    private Mono<Void> procesarNeumaticoIndividual(NeumaticoInspeccionadoRequest neumaticoRequest,
+                                                   FinalizarInspeccionRequest request,
+                                                   Integer empresaId) {
         Integer neumaticoId = neumaticoRequest.getNeumaticoId();
         log.debug("Procesando neumático individual: {}", neumaticoId);
-        
-        return validarNeumaticoExiste(neumaticoId)
-            .then(actualizarMedicionesRtdNeumatico(neumaticoRequest))
-            .then(crearMovimientoInspeccion(neumaticoRequest, request))
+
+        return validarNeumaticoExiste(neumaticoId, empresaId)
+            .then(actualizarMedicionesRtdNeumatico(neumaticoRequest, empresaId))
+            .then(crearMovimientoInspeccion(neumaticoRequest, request, empresaId))
             .then(procesarObservaciones(neumaticoRequest, request))
             .doOnSuccess(result -> log.debug("Neumático {} procesado exitosamente", neumaticoId))
             .onErrorMap(throwable -> {
@@ -273,20 +276,21 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
             });
     }
 
-    private Mono<Neumatico> validarNeumaticoExiste(Integer neumaticoId) {
-        return neumaticoRepository.findById(neumaticoId)
+    private Mono<Neumatico> validarNeumaticoExiste(Integer neumaticoId, Integer empresaId) {
+        return neumaticoRepository.findByIdAndEmpresaId(neumaticoId, empresaId)
             .switchIfEmpty(Mono.error(new NeumaticoNotFoundException(neumaticoId.toString())));
     }
 
-    private Mono<Void> actualizarMedicionesRtdNeumatico(NeumaticoInspeccionadoRequest request) {
+    private Mono<Void> actualizarMedicionesRtdNeumatico(NeumaticoInspeccionadoRequest request, Integer empresaId) {
         BigDecimal rtdActual = calcularRtdActual(request.getRtd1(), request.getRtd2(), request.getRtd3());
         Integer neumaticoId = request.getNeumaticoId();
-        
-        log.debug("Actualizando mediciones RTD para neumático: {} - RTD1: {}, RTD2: {}, RTD3: {}, RTD Actual: {}", 
+
+        log.debug("Actualizando mediciones RTD para neumático: {} - RTD1: {}, RTD2: {}, RTD3: {}, RTD Actual: {}",
             neumaticoId, request.getRtd1(), request.getRtd2(), request.getRtd3(), rtdActual);
-        
+
         return neumaticoRepository.updateRtdMeasurements(
                 neumaticoId,
+                empresaId,
                 request.getRtd1(),
                 request.getRtd2(),
                 request.getRtd3(),
@@ -331,9 +335,10 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
         return rtd1.min(rtd2).min(rtd3);
     }
 
-    private Mono<Void> crearMovimientoInspeccion(NeumaticoInspeccionadoRequest neumaticoRequest, 
-                                                FinalizarInspeccionRequest request) {
-        return validarNeumaticoExiste(neumaticoRequest.getNeumaticoId())
+    private Mono<Void> crearMovimientoInspeccion(NeumaticoInspeccionadoRequest neumaticoRequest,
+                                                FinalizarInspeccionRequest request,
+                                                Integer empresaId) {
+        return validarNeumaticoExiste(neumaticoRequest.getNeumaticoId(), empresaId)
             .flatMap(neumatico -> construirMovimientoInspeccion(neumatico, neumaticoRequest, request))
             .flatMap(movimientoNeumaticoRepository::save)
             .doOnSuccess(movimiento -> log.debug("Movimiento de inspección creado con ID: {}", movimiento.getId()))

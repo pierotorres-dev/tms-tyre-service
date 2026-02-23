@@ -14,10 +14,11 @@ public interface InspeccionNeumaticoService {
      * - Neumatico: mediciones RTD
      * - MovimientoNeumatico: registro del movimiento de inspección
      * - ObservacionNeumatico: observaciones encontradas
-     * 
-     * @param equipoId ID del equipo inspeccionado
-     * @param request Datos de la inspección
+     *
+     * @param equipoId  ID del equipo inspeccionado
+     * @param empresaId ID de la empresa (tenant isolation)
+     * @param request   Datos de la inspección
      * @return Mono<Void> que indica la finalización exitosa del proceso
      */
-    Mono<Void> finalizarInspeccion(Integer equipoId, FinalizarInspeccionRequest request);
+    Mono<Void> finalizarInspeccion(Integer equipoId, Integer empresaId, FinalizarInspeccionRequest request);
 }

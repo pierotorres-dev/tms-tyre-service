@@ -6,9 +6,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface NeumaticoService {
-    Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId);
-    
-    Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request);
-    
-    Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request);
+    Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId);
+
+    Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request, Integer empresaId);
+
+    Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request, Integer empresaId);
 }
