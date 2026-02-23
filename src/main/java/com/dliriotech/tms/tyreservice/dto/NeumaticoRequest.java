@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,9 +15,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class NeumaticoRequest {
-    
-    @NotNull(message = "El ID de empresa es obligatorio")
-    @Positive(message = "El ID de empresa debe ser positivo")
+
+    /**
+     * Ignorado en la deserialización del body.
+     * Es inyectado exclusivamente desde el header X-Empresa-Id por el API Gateway.
+     */
+    @JsonIgnore
     private Integer empresaId;
 
     @NotNull(message = "El ID del catálogo de neumático es obligatorio")
