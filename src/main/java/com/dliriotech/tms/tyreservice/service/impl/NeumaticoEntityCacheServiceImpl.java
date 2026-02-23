@@ -105,8 +105,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, DisenoReencaucheResponse.class)
                 .switchIfEmpty(disenoReencaucheRepository.findById(disenoId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-DIS-NF-001", "Diseño de reencauche no encontrado: " + disenoId)))
+                        .switchIfEmpty(Mono.error(new DisenoReencaucheNotFoundException(disenoId.toString())))
                         .map(diseno -> DisenoReencaucheResponse.builder()
                                 .id(diseno.getId())
                                 .nombreDiseno(diseno.getNombreDiseno())
@@ -124,8 +123,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, ClasificacionNeumaticoResponse.class)
                 .switchIfEmpty(clasificacionNeumaticoRepository.findById(clasificacionId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-CLS-NF-001", "Clasificación de neumático no encontrada: " + clasificacionId)))
+                        .switchIfEmpty(Mono.error(new ClasificacionNeumaticoNotFoundException(clasificacionId.toString())))
                         .map(clasificacion -> ClasificacionNeumaticoResponse.builder()
                                 .id(clasificacion.getId())
                                 .nombre(clasificacion.getNombre())
@@ -143,8 +141,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, MarcaNeumaticoResponse.class)
                 .switchIfEmpty(marcaNeumaticoRepository.findById(marcaId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-MRC-NF-001", "Marca de neumático no encontrada: " + marcaId)))
+                        .switchIfEmpty(Mono.error(new MarcaNeumaticoNotFoundException(marcaId.toString())))
                         .map(marca -> MarcaNeumaticoResponse.builder()
                                 .id(marca.getId())
                                 .nombre(marca.getNombre())
@@ -161,8 +158,7 @@ public class NeumaticoEntityCacheServiceImpl implements NeumaticoEntityCacheServ
         
         return getCachedEntity(cacheKey, MedidaNeumaticoResponse.class)
                 .switchIfEmpty(medidaNeumaticoRepository.findById(medidaId)
-                        .switchIfEmpty(Mono.error(new NeumaticoException(
-                                "TYR-MED-NF-001", "Medida de neumático no encontrada: " + medidaId)))
+                        .switchIfEmpty(Mono.error(new MedidaNeumaticoNotFoundException(medidaId.toString())))
                         .map(medida -> MedidaNeumaticoResponse.builder()
                                 .id(medida.getId())
                                 .descripcion(medida.getDescripcion())

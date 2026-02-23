@@ -5,6 +5,7 @@ import com.dliriotech.tms.tyreservice.entity.Neumatico;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
 import com.dliriotech.tms.tyreservice.exception.ValidationException;
 import com.dliriotech.tms.tyreservice.exception.DataIntegrityException;
+import com.dliriotech.tms.tyreservice.exception.ErrorCode;
 import com.dliriotech.tms.tyreservice.exception.PosicionAlreadyOccupiedException;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoNotFoundException;
 import com.dliriotech.tms.tyreservice.repository.NeumaticoRepository;
@@ -44,7 +45,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                         return Flux.error(throwable);
                     }
                     return Flux.error(new NeumaticoException(
-                            "TYR-NEU-OPE-001", "Error al obtener neumáticos del equipo " + equipoId, throwable));
+                            ErrorCode.NEUMATICO_OPERATION_ERROR, "Error al obtener neumáticos del equipo " + equipoId, throwable));
                 });
     }
 
@@ -113,7 +114,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                     }
                     
                     return Mono.error(new NeumaticoException(
-                            "TYR-NEU-OPE-002", "Error al guardar neumático", throwable));
+                            ErrorCode.NEUMATICO_SAVE_ERROR, "Error al guardar neumático", throwable));
                 });
     }
 
@@ -187,7 +188,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                     }
                     
                     return Mono.error(new NeumaticoException(
-                            "TYR-NEU-OPE-003", "Error al actualizar neumático", throwable));
+                            ErrorCode.NEUMATICO_UPDATE_ERROR, "Error al actualizar neumático", throwable));
                 });
     }
 

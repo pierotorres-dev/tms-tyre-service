@@ -3,6 +3,7 @@ package com.dliriotech.tms.tyreservice.service.impl;
 import com.dliriotech.tms.tyreservice.constants.TipoMovimientoConstants;
 import com.dliriotech.tms.tyreservice.entity.*;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
+import com.dliriotech.tms.tyreservice.exception.ErrorCode;
 import com.dliriotech.tms.tyreservice.repository.*;
 import com.dliriotech.tms.tyreservice.service.MasterDataCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -137,7 +138,7 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
                                         .thenReturn(id))
                                 .doOnSuccess(id -> log.info("ID de tipo movimiento para '{}' cargado desde BD y cacheado: {}",
                                         nombre, id))
-                                .switchIfEmpty(Mono.error(new NeumaticoException("404",
+                                .switchIfEmpty(Mono.error(new NeumaticoException(ErrorCode.NEUMATICO_OPERATION_ERROR,
                                         "No se encontró tipo de movimiento con nombre: " + nombre)))
                 )
                 .doOnNext(id -> log.info("ID de tipo movimiento para '{}' obtenido desde cache: {}", nombre, id))

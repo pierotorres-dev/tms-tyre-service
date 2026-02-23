@@ -23,4 +23,16 @@ public class TyreServiceException extends BaseException {
     protected TyreServiceException(String message, HttpStatus status, String code, Throwable cause) {
         super(message, status, code, cause);
     }
+
+    protected TyreServiceException(ErrorCode errorCode) {
+        super(errorCode);
+    }
+
+    protected TyreServiceException(ErrorCode errorCode, String message) {
+        super(errorCode, message);
+    }
+
+    protected TyreServiceException(ErrorCode errorCode, String message, Throwable cause) {
+        super(errorCode, message, cause);
+    }
 }

@@ -22,8 +22,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Manejador global de excepciones para el servicio de neumáticos.
- * Proporciona un manejo centralizado y consistente de todas las excepciones.
+ * Manejador global de excepciones para el tyre-service.
+ * Gracias al polimorfismo de {@link BaseException}, ya no requiere un if-else por cada tipo:
+ * todas las excepciones de dominio se resuelven en una sola rama.
+ * Solo se tratan de forma especial las excepciones de infraestructura (Spring/DB) que
+ * no extienden {@link BaseException}.
  */
 @Component
 @Order(-2)
@@ -45,125 +48,59 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
 
     private Mono<ServerResponse> renderErrorResponse(ServerRequest request) {
         Throwable error = getError(request);
-        log.error("Error procesando solicitud en path '{}': {} - Tipo: {}", 
-            request.path(), error.getMessage(), error.getClass().getSimpleName(), error);
 
-        // Buscar el handler más específico (evaluando desde las clases más específicas hacia las generales)
-        ErrorDetails errorDetails = null;
-        
-        // Excepciones específicas primero - Inspecciones
-        if (error instanceof InspeccionProcessingException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof RtdInvalidIncrementException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        // Excepciones específicas - Observaciones
-        else if (error instanceof ObservacionUpdateException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ObservacionCreationException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ObservacionNotFoundException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ObservacionMasterDataException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ObservacionProcessingException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        // Excepciones específicas de neumáticos
-        else if (error instanceof PosicionAlreadyOccupiedException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof NeumaticoNotFoundException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof NeumaticoAlreadyAssignedException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof InvalidNeumaticoStateException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof CatalogoNeumaticoNotFoundException || 
-                 error instanceof ProveedorNotFoundException ||
-                 error instanceof DisenoReencaucheNotFoundException ||
-                 error instanceof ClasificacionNeumaticoNotFoundException ||
-                 error instanceof MarcaNeumaticoNotFoundException ||
-                 error instanceof MedidaNeumaticoNotFoundException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ValidationException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof DataIntegrityException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof CacheOperationException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof NeumaticoException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof ResourceNotFoundException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof BaseException) {
-            BaseException baseEx = (BaseException) error;
-            errorDetails = new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
-        }
-        else if (error instanceof WebExchangeBindException) {
-            WebExchangeBindException bindEx = (WebExchangeBindException) error;
-            String message = bindEx.getBindingResult().getFieldErrors().stream()
-                    .map(errorField -> String.format("Campo '%s': %s", errorField.getField(), errorField.getDefaultMessage()))
-                    .reduce((msg1, msg2) -> msg1 + "; " + msg2)
-                    .orElse("Error de validación en los datos de entrada");
-            errorDetails = new ErrorDetails(HttpStatus.BAD_REQUEST, "TYR-VAL-004", message);
-        }
-        else if (error instanceof ServerWebInputException) {
-            errorDetails = new ErrorDetails(HttpStatus.BAD_REQUEST, "TYR-INPUT-001", 
-                    "Datos de entrada inválidos: " + error.getMessage());
-        }
-        else if (error instanceof DataIntegrityViolationException) {
-            errorDetails = new ErrorDetails(HttpStatus.CONFLICT, "TYR-DB-001", 
-                    "Error de integridad de datos: " + error.getMessage());
-        }
-        else {
-            errorDetails = new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, "TYR-SYS-ERR-001",
-                    "Error interno del servidor: " + error.getMessage());
+        HttpStatus status;
+        String code;
+        String message;
+
+        if (error instanceof BaseException baseEx) {
+            // Todas las excepciones de dominio: neumáticos, observaciones, inspecciones, caché, etc.
+            status = baseEx.getStatus();
+            code = baseEx.getCode();
+            message = baseEx.getMessage();
+            log.warn("Error de negocio [{}] en '{}': {}", code, request.path(), message);
+
+        } else if (error instanceof WebExchangeBindException bindEx) {
+            // Validaciones de @Valid en el body del request
+            status = HttpStatus.BAD_REQUEST;
+            code = ErrorCode.VALIDATION_ERROR.getCode();
+            message = bindEx.getBindingResult().getFieldErrors().stream()
+                    .map(fe -> String.format("Campo '%s': %s", fe.getField(), fe.getDefaultMessage()))
+                    .reduce((a, b) -> a + "; " + b)
+                    .orElse(ErrorCode.VALIDATION_ERROR.getDefaultMessage());
+            log.warn("Error de validación en '{}': {}", request.path(), message);
+
+        } else if (error instanceof ServerWebInputException) {
+            // Body malformado, tipo incorrecto, etc.
+            status = HttpStatus.BAD_REQUEST;
+            code = ErrorCode.VALIDATION_INPUT_ERROR.getCode();
+            message = ErrorCode.VALIDATION_INPUT_ERROR.getDefaultMessage();
+            log.warn("Datos de entrada inválidos en '{}': {}", request.path(), error.getMessage());
+
+        } else if (error instanceof DataIntegrityViolationException) {
+            // Violaciones de constraints a nivel de BD no capturadas por el dominio
+            status = HttpStatus.CONFLICT;
+            code = ErrorCode.DATA_INTEGRITY_CONFLICT.getCode();
+            message = ErrorCode.DATA_INTEGRITY_CONFLICT.getDefaultMessage();
+            log.error("Violación de integridad de datos en '{}': {}", request.path(), error.getMessage());
+
+        } else {
+            // Cualquier otro error no controlado
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            code = ErrorCode.INTERNAL_ERROR.getCode();
+            message = ErrorCode.INTERNAL_ERROR.getDefaultMessage();
+            log.error("Error no controlado en '{}': {}", request.path(), error.getMessage(), error);
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .code(errorDetails.code())
-                .message(errorDetails.message())
+                .code(code)
+                .message(message)
                 .path(request.path())
                 .timestamp(LocalDateTime.now(ZoneId.of("America/Lima")))
                 .build();
 
-        return ServerResponse.status(errorDetails.status())
+        return ServerResponse.status(status)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(errorResponse));
-    }
-
-    private record ErrorDetails(HttpStatus status, String code, String message) {
     }
 }
