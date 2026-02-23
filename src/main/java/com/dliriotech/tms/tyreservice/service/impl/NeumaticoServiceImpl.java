@@ -5,6 +5,7 @@ import com.dliriotech.tms.tyreservice.entity.Neumatico;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
 import com.dliriotech.tms.tyreservice.exception.ValidationException;
 import com.dliriotech.tms.tyreservice.exception.DataIntegrityException;
+import com.dliriotech.tms.tyreservice.exception.ErrorCode;
 import com.dliriotech.tms.tyreservice.exception.PosicionAlreadyOccupiedException;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoNotFoundException;
 import com.dliriotech.tms.tyreservice.repository.NeumaticoRepository;
@@ -28,14 +29,14 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     private final RtdThresholdService rtdThresholdService;
 
     @Override
-    public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId) {
+    public Flux<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId) {
         if (equipoId == null || equipoId <= 0) {
             return Flux.error(new ValidationException("equipoId", "debe ser un número positivo válido"));
         }
 
-        return neumaticoRepository.getAllByEquipoIdOrderByPosicionDesc(equipoId)
+        return neumaticoRepository.getAllByEquipoIdAndEmpresaIdOrderByPosicionDesc(equipoId, empresaId)
                 .flatMap(this::enrichNeumaticoWithRelations)
-                .doOnSubscribe(s -> log.info("Iniciando consulta de neumáticos para equipo {}", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de neumáticos para equipo {} empresa {}", equipoId, empresaId))
                 .doOnComplete(() -> log.info("Consulta de neumáticos para equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener neumáticos para equipo {}: {}",
                         equipoId, error.getMessage()))
@@ -44,12 +45,14 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                         return Flux.error(throwable);
                     }
                     return Flux.error(new NeumaticoException(
-                            "TYR-NEU-OPE-001", "Error al obtener neumáticos del equipo " + equipoId, throwable));
+                            ErrorCode.NEUMATICO_OPERATION_ERROR, "Error al obtener neumáticos del equipo " + equipoId, throwable));
                 });
     }
 
     @Override
-    public Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request) {
+    public Mono<NeumaticoResponse> saveNeumatico(NeumaticoRequest request, Integer empresaId) {
+        // El empresaId del header prevalece sobre el del body
+        request.setEmpresaId(empresaId);
         return validateNeumaticoRequest(request)
                 .then(validatePosicionAvailability(request.getEquipoId(), request.getPosicion()))
                 .then(Mono.fromCallable(() -> mapRequestToEntity(request)))
@@ -111,18 +114,20 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                     }
                     
                     return Mono.error(new NeumaticoException(
-                            "TYR-NEU-OPE-002", "Error al guardar neumático", throwable));
+                            ErrorCode.NEUMATICO_SAVE_ERROR, "Error al guardar neumático", throwable));
                 });
     }
 
     @Override
-    public Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request) {
+    public Mono<NeumaticoResponse> updateNeumatico(Integer id, NeumaticoRequest request, Integer empresaId) {
         if (id == null || id <= 0) {
             return Mono.error(new ValidationException("id", "debe ser un número positivo válido"));
         }
+        // El empresaId del header prevalece sobre el del body
+        request.setEmpresaId(empresaId);
 
         return validateNeumaticoRequest(request)
-                .then(neumaticoRepository.findById(id)
+                .then(neumaticoRepository.findByIdAndEmpresaId(id, empresaId)
                         .switchIfEmpty(Mono.error(new NeumaticoNotFoundException(id.toString())))
                         .flatMap(existingNeumatico -> {
                             // Solo validar posición si está cambiando
@@ -183,7 +188,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                     }
                     
                     return Mono.error(new NeumaticoException(
-                            "TYR-NEU-OPE-003", "Error al actualizar neumático", throwable));
+                            ErrorCode.NEUMATICO_UPDATE_ERROR, "Error al actualizar neumático", throwable));
                 });
     }
 

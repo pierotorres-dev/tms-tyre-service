@@ -15,4 +15,5 @@ public final class TipoMovimientoConstants {
     public static final String TORQUEO_TUERCAS = "Torqueo de Tuercas";
     public static final String INSPECCION_PERIODICA = "Inspección Periódica";
     public static final String BALANCEO = "Balanceo de Neumático";
+    public static final String INVERSION = "Inversión de Neumático";
 }

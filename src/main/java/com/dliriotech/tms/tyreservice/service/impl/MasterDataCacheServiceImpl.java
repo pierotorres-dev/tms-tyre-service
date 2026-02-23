@@ -3,6 +3,7 @@ package com.dliriotech.tms.tyreservice.service.impl;
 import com.dliriotech.tms.tyreservice.constants.TipoMovimientoConstants;
 import com.dliriotech.tms.tyreservice.entity.*;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
+import com.dliriotech.tms.tyreservice.exception.ErrorCode;
 import com.dliriotech.tms.tyreservice.repository.*;
 import com.dliriotech.tms.tyreservice.service.MasterDataCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +30,7 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
     private final TipoEquipoRepository tipoEquipoRepository;
     private final MovimientoNeumaticoRepository movimientoNeumaticoRepository;
     private final TipoMovimientoNeumaticoRepository tipoMovimientoNeumaticoRepository;
+    private final CatalogoServiciosEmpresaRepository catalogoServiciosEmpresaRepository;
 
     // TTL para diferentes tipos de datos
     private static final Duration EQUIPO_TTL = Duration.ofHours(4);
@@ -42,6 +44,7 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
     private static final String MOVEMENT_PREFIX = "cache:movement:";
     private static final String RTD_MINIMO_PREFIX = "cache:rtdMinimo:";
     private static final String TIPO_MOVIMIENTO_BY_NAME_PREFIX = "cache:tipoMovimiento:byName:";
+    private static final String CATALOGO_SERVICIOS_PREFIX = "cache:catalogoServicios:";
 
     @Override
     public Mono<Equipo> getEquipo(Integer equipoId) {
@@ -133,12 +136,30 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
                                 .map(TipoMovimientoNeumatico::getId)
                                 .flatMap(id -> cacheEntity(cacheKey, id, MASTER_DATA_TTL)
                                         .thenReturn(id))
-                                .doOnSuccess(id -> log.debug("ID de tipo movimiento para '{}' cargado desde BD y cacheado: {}",
+                                .doOnSuccess(id -> log.info("ID de tipo movimiento para '{}' cargado desde BD y cacheado: {}",
                                         nombre, id))
-                                .switchIfEmpty(Mono.error(new NeumaticoException("404",
+                                .switchIfEmpty(Mono.error(new NeumaticoException(ErrorCode.NEUMATICO_OPERATION_ERROR,
                                         "No se encontró tipo de movimiento con nombre: " + nombre)))
                 )
-                .doOnNext(id -> log.debug("ID de tipo movimiento para '{}' obtenido desde cache: {}", nombre, id))
+                .doOnNext(id -> log.info("ID de tipo movimiento para '{}' obtenido desde cache: {}", nombre, id))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Mono<CatalogoServiciosEmpresa> getCatalogoServiciosEmpresa(Integer empresaId, Integer tipoEquipoId, Integer tipoMovimientoId) {
+        String cacheKey = CATALOGO_SERVICIOS_PREFIX + empresaId + ":" + tipoEquipoId + ":" + tipoMovimientoId;
+        
+        return getCachedEntity(cacheKey, CatalogoServiciosEmpresa.class)
+                .switchIfEmpty(
+                    catalogoServiciosEmpresaRepository.findByEmpresaIdAndTipoEquipoIdAndTipoMovimientoId(
+                            empresaId, tipoEquipoId, tipoMovimientoId)
+                            .flatMap(catalogo -> cacheEntity(cacheKey, catalogo, MASTER_DATA_TTL)
+                                    .thenReturn(catalogo))
+                            .doOnSuccess(catalogo -> log.info("Catálogo servicios empresa {} - tipo {} - movimiento {} cargado desde BD",
+                                    empresaId, tipoEquipoId, tipoMovimientoId))
+                )
+                .doOnNext(catalogo -> log.info("Catálogo servicios empresa {} - tipo {} - movimiento {} obtenido desde cache",
+                        empresaId, tipoEquipoId, tipoMovimientoId))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -191,6 +212,15 @@ public class MasterDataCacheServiceImpl implements MasterDataCacheService {
         String cacheKey = TIPO_MOVIMIENTO_BY_NAME_PREFIX + nombre;
         return redisTemplate.delete(cacheKey)
                 .doOnSuccess(v -> log.debug("Cache de tipo movimiento by Nombre {} invalidado", nombre))
+                .then();
+    }
+
+    @Override
+    public Mono<Void> invalidateCatalogoServiciosEmpresaCache(Integer empresaId, Integer tipoEquipoId, Integer tipoMovimientoId) {
+        String cacheKey = CATALOGO_SERVICIOS_PREFIX + empresaId + ":" + tipoEquipoId + ":" + tipoMovimientoId;
+        return redisTemplate.delete(cacheKey)
+                .doOnSuccess(v -> log.debug("Cache de catálogo servicios empresa {} - tipo {} - movimiento {} invalidado", 
+                        empresaId, tipoEquipoId, tipoMovimientoId))
                 .then();
     }
 

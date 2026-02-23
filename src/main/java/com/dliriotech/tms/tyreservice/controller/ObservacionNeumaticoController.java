@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.controller;
 
+import com.dliriotech.tms.tyreservice.constants.HeaderConstants;
 import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoNuevoRequest;
 import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoResponse;
 import com.dliriotech.tms.tyreservice.dto.ObservacionNeumaticoUpdateRequest;
@@ -22,26 +23,29 @@ public class ObservacionNeumaticoController {
     @GetMapping(value = "/neumatico/{neumaticoId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<ObservacionNeumaticoResponse> getObservacionesByNeumatico(
             @PathVariable Integer neumaticoId,
-            @RequestParam(value = "estado", required = false) String estado) {
+            @RequestParam(value = "estado", required = false) String estado,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId) {
         if ("pendiente".equalsIgnoreCase(estado)) {
-            return observacionNeumaticoService.getAllObservacionesPendientesAndByNeumaticoId(neumaticoId);
+            return observacionNeumaticoService.getAllObservacionesPendientesAndByNeumaticoId(neumaticoId, empresaId);
         }
-        return observacionNeumaticoService.getAllObservacionesByNeumaticoId(neumaticoId);
+        return observacionNeumaticoService.getAllObservacionesByNeumaticoId(neumaticoId, empresaId);
     }
 
     // Endpoint para observaciones solucionables
     @GetMapping(value = "/neumatico/{neumaticoId}/solucionables", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<ObservacionNeumaticoResponse> getObservacionesSolucionables(
             @PathVariable Integer neumaticoId,
-            @RequestParam Integer tipoMovimientoId) {
-        return observacionNeumaticoService.getAllObservacionesByNeumaticoIdAndTipoMovimientoId(neumaticoId, tipoMovimientoId);
+            @RequestParam Integer tipoMovimientoId,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId) {
+        return observacionNeumaticoService.getAllObservacionesByNeumaticoIdAndTipoMovimientoId(neumaticoId, tipoMovimientoId, empresaId);
     }
 
     // Endpoint para observaciones por equipo
     @GetMapping(value = "/equipo/{equipoId}/pendientes", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<ObservacionNeumaticoResponse> getObservacionesPendientesByEquipo(
-            @PathVariable Integer equipoId) {
-        return observacionNeumaticoService.getAllObservacionesPendientesAndByEquipoId(equipoId);
+            @PathVariable Integer equipoId,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId) {
+        return observacionNeumaticoService.getAllObservacionesPendientesAndByEquipoId(equipoId, empresaId);
     }
 
     // Creación de observaciones
@@ -56,7 +60,8 @@ public class ObservacionNeumaticoController {
     @PatchMapping(value = "/{observacionId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ObservacionNeumaticoResponse> updateObservacionNeumatico(
             @PathVariable Integer observacionId,
+            @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId,
             @Valid @RequestBody ObservacionNeumaticoUpdateRequest request) {
-        return observacionNeumaticoService.updateObservacion(observacionId, request);
+        return observacionNeumaticoService.updateObservacion(observacionId, request, empresaId);
     }
 }

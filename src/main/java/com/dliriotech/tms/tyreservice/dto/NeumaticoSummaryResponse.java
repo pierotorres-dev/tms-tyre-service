@@ -14,12 +14,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class NeumaticoSummaryResponse {
-    
+
     /**
      * Identificador único del neumático
      */
     private Integer id;
-    
+
+    /**
+     * Identificador de la empresa a la que pertenece el neumático
+     */
+    private Integer empresaId;
+
     /**
      * Código de serie del neumático
      */

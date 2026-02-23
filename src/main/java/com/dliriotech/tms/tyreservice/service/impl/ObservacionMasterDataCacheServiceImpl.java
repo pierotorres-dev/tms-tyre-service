@@ -5,6 +5,7 @@ import com.dliriotech.tms.tyreservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.tyreservice.entity.EstadoObservacion;
 import com.dliriotech.tms.tyreservice.entity.TipoObservacion;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
+import com.dliriotech.tms.tyreservice.exception.ErrorCode;
 import com.dliriotech.tms.tyreservice.repository.EstadoObservacionRepository;
 import com.dliriotech.tms.tyreservice.repository.TipoObservacionRepository;
 import com.dliriotech.tms.tyreservice.service.ObservacionMasterDataCacheService;
@@ -95,7 +96,7 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
                                 })
                                 .doOnError(error -> log.error("Error al obtener ID de estado de observación para nombre {}: {}",
                                         nombre, error.getMessage()))
-                                .switchIfEmpty(Mono.error(new NeumaticoException("404",
+                                .switchIfEmpty(Mono.error(new NeumaticoException(ErrorCode.OBSERVACION_ESTADO_NOT_FOUND,
                                         "No se encontró estado de observación con nombre: " + nombre)))
                 );
     }

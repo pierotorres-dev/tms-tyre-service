@@ -23,4 +23,32 @@ public abstract class BaseException extends RuntimeException {
         this.status = status;
         this.code = code;
     }
+
+    /**
+     * Constructor que acepta un {@link ErrorCode} como fuente única de verdad.
+     * Usa el mensaje por defecto del ErrorCode.
+     */
+    protected BaseException(ErrorCode errorCode) {
+        super(errorCode.getDefaultMessage());
+        this.status = errorCode.getStatus();
+        this.code = errorCode.getCode();
+    }
+
+    /**
+     * Constructor que acepta un {@link ErrorCode} y sobreescribe el mensaje por defecto.
+     */
+    protected BaseException(ErrorCode errorCode, String message) {
+        super(message);
+        this.status = errorCode.getStatus();
+        this.code = errorCode.getCode();
+    }
+
+    /**
+     * Constructor que acepta un {@link ErrorCode}, mensaje personalizado y causa.
+     */
+    protected BaseException(ErrorCode errorCode, String message, Throwable cause) {
+        super(message, cause);
+        this.status = errorCode.getStatus();
+        this.code = errorCode.getCode();
+    }
 }

@@ -4,6 +4,7 @@ import com.dliriotech.tms.tyreservice.entity.ConfiguracionEmpresaEquipo;
 import com.dliriotech.tms.tyreservice.entity.Equipo;
 import com.dliriotech.tms.tyreservice.entity.MovimientoNeumatico;
 import com.dliriotech.tms.tyreservice.entity.TipoEquipo;
+import com.dliriotech.tms.tyreservice.entity.CatalogoServiciosEmpresa;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -51,6 +52,12 @@ public interface MasterDataCacheService {
      * @return Mono con el ID del tipo de movimiento
      */
     Mono<Integer> getTipoMovimientoIdByNombre(String nombre);
+    
+    /**
+     * Obtiene el costo de servicio por empresa, tipo de equipo y tipo de movimiento
+     * TTL: 24 horas (datos maestros)
+     */
+    Mono<CatalogoServiciosEmpresa> getCatalogoServiciosEmpresa(Integer empresaId, Integer tipoEquipoId, Integer tipoMovimientoId);
 
     /**
      * Invalida cache relacionado con un equipo específico.
@@ -68,4 +75,9 @@ public interface MasterDataCacheService {
     Mono<Void> invalidateMovimientoCache(Integer neumaticoId);
 
     Mono<Void> invalidateTipoMovimientoIdByNombreCache(String nombre);
+    
+    /**
+     * Invalida cache de catálogo de servicios empresa.
+     */
+    Mono<Void> invalidateCatalogoServiciosEmpresaCache(Integer empresaId, Integer tipoEquipoId, Integer tipoMovimientoId);
 }
