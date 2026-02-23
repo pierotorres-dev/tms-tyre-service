@@ -427,15 +427,9 @@ public class InspeccionNeumaticoServiceImpl implements InspeccionNeumaticoServic
 
         return Flux.fromIterable(neumaticoRequest.getObservacionNeumaticoList())
             .flatMap(observacion -> {
-                // Establecer el usuarioCreacionId si no está presente
-                if (observacion.getUsuarioCreacionId() == null) {
-                    observacion.setUsuarioCreacionId(request.getUsuarioId());
-                }
-                // Establecer el equipoId si no está presente
-                if (observacion.getEquipoId() == null) {
-                    observacion.setEquipoId(request.getEquipoId());
-                }
-                
+                // Siempre inyectados desde el contexto de seguridad (header X-User-Id y path /{equipoId})
+                observacion.setUsuarioCreacionId(request.getUsuarioId());
+                observacion.setEquipoId(request.getEquipoId());
                 return observacionNeumaticoService.saveObservacion(observacion);
             })
             .then()

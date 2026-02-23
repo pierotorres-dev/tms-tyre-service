@@ -52,7 +52,9 @@ public class ObservacionNeumaticoController {
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<ObservacionNeumaticoResponse> createObservacionNeumatico(
+            @RequestHeader(HeaderConstants.HEADER_USER_ID) Integer userId,
             @Valid @RequestBody ObservacionNeumaticoNuevoRequest request) {
+        request.setUsuarioCreacionId(userId);
         return observacionNeumaticoService.saveObservacion(request);
     }
 

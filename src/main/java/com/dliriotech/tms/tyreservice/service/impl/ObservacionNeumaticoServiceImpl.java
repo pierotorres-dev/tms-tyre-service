@@ -1,6 +1,7 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.constants.EstadoObservacionConstants;
+import com.dliriotech.tms.tyreservice.constants.HeaderConstants;
 import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
 import com.dliriotech.tms.tyreservice.exception.ObservacionCreationException;
@@ -319,7 +320,8 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionCreationException.invalidRequest("descripcion", request.getDescripcion());
         }
         if (request.getUsuarioCreacionId() == null || request.getUsuarioCreacionId() <= 0) {
-            throw ObservacionCreationException.invalidRequest("usuarioCreacionId", request.getUsuarioCreacionId());
+            throw ObservacionCreationException.invalidRequest("usuarioCreacionId",
+                "no fue provisto por el header " + HeaderConstants.HEADER_USER_ID);
         }
         return request;
     }
