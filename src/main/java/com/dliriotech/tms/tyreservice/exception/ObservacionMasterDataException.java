@@ -22,9 +22,4 @@ public class ObservacionMasterDataException extends TyreServiceException {
         return new ObservacionMasterDataException(ErrorCode.OBSERVACION_TIPO_NOT_FOUND,
             String.format("No se pudo encontrar el tipo de observación con ID: %d", tipoId));
     }
-
-    public static ObservacionMasterDataException cacheError(String operation, Throwable cause) {
-        return new ObservacionMasterDataException(ErrorCode.OBSERVACION_MASTER_DATA_ERROR,
-            String.format("Error en operación de caché: %s", operation), cause);
-    }
 }
