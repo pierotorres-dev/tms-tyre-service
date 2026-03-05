@@ -1,12 +1,14 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.MapaObservacionSolucion;
-import org.springframework.data.r2dbc.repository.Query;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Flux;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface MapaObservacionSolucionRepository extends ReactiveCrudRepository<MapaObservacionSolucion, Integer> {
-    
-    @Query("SELECT id_tipo_observacion FROM mapa_observacion_solucion WHERE id_tipo_movimiento = :tipoMovimientoId")
-    Flux<Integer> findTipoObservacionIdsByTipoMovimientoId(Integer tipoMovimientoId);
+import java.util.List;
+
+public interface MapaObservacionSolucionRepository extends JpaRepository<MapaObservacionSolucion, Integer> {
+
+    @Query("SELECT m.tipoObservacionId FROM MapaObservacionSolucion m WHERE m.tipoMovimientoId = :tipoMovimientoId")
+    List<Integer> findTipoObservacionIdsByTipoMovimientoId(@Param("tipoMovimientoId") Integer tipoMovimientoId);
 }

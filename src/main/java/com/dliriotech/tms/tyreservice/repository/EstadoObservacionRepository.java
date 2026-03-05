@@ -1,9 +1,10 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.EstadoObservacion;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Mono;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface EstadoObservacionRepository extends ReactiveCrudRepository<EstadoObservacion, Integer> {
-    Mono<EstadoObservacion> findByNombre(String nombre);
+import java.util.Optional;
+
+public interface EstadoObservacionRepository extends JpaRepository<EstadoObservacion, Integer> {
+    Optional<EstadoObservacion> findByNombre(String nombre);
 }

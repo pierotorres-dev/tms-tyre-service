@@ -1,19 +1,20 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.CatalogoServiciosEmpresa;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Mono;
+
+import java.util.Optional;
 
 @Repository
-public interface CatalogoServiciosEmpresaRepository extends ReactiveCrudRepository<CatalogoServiciosEmpresa, Integer> {
-    
+public interface CatalogoServiciosEmpresaRepository extends JpaRepository<CatalogoServiciosEmpresa, Integer> {
+
     /**
-     * Busca el costo de servicio por empresa, tipo de equipo y tipo de movimiento
+     * Busca el costo de servicio por empresa, tipo de equipo y tipo de movimiento.
      */
-    Mono<CatalogoServiciosEmpresa> findByEmpresaIdAndTipoEquipoIdAndTipoMovimientoId(
-        Integer empresaId, 
-        Integer tipoEquipoId, 
+    Optional<CatalogoServiciosEmpresa> findByEmpresaIdAndTipoEquipoIdAndTipoMovimientoId(
+        Integer empresaId,
+        Integer tipoEquipoId,
         Integer tipoMovimientoId
     );
 }

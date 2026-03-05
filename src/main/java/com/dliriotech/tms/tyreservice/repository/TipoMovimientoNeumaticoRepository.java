@@ -1,9 +1,10 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.TipoMovimientoNeumatico;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Mono;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface TipoMovimientoNeumaticoRepository extends ReactiveCrudRepository<TipoMovimientoNeumatico, Integer> {
-    Mono<TipoMovimientoNeumatico> findByNombre(String nombre);
+import java.util.Optional;
+
+public interface TipoMovimientoNeumaticoRepository extends JpaRepository<TipoMovimientoNeumatico, Integer> {
+    Optional<TipoMovimientoNeumatico> findByNombre(String nombre);
 }
