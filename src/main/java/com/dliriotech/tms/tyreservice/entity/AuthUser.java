@@ -1,24 +1,24 @@
 package com.dliriotech.tms.tyreservice.entity;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("auth_user")
+@Entity
+@Table(name = "auth_user")
 public class AuthUser {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column("user_name")
+    @Column(name = "user_name")
     private String userName;
 
     private String password;
@@ -27,10 +27,10 @@ public class AuthUser {
 
     private String name;
 
-    @Column("last_name")
+    @Column(name = "last_name")
     private String lastName;
 
-    @Column("phone_number")
+    @Column(name = "phone_number")
     private String phoneNumber;
 
     private String email;

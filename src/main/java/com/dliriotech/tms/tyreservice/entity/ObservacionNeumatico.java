@@ -1,52 +1,64 @@
 package com.dliriotech.tms.tyreservice.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-@Table("observaciones_neumatico")
+@Entity
+@Table(name = "observaciones_neumatico")
 public class ObservacionNeumatico {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column("id_neumatico")
+    @Column(name = "id_neumatico")
     private Integer neumaticoId;
 
-    @Column("id_equipo")
+    @Column(name = "id_equipo")
     private Integer equipoId;
 
     private Integer posicion;
 
-    @Column("id_tipo_observacion")
+    @Column(name = "id_tipo_observacion")
     private Integer tipoObservacionId;
 
     private String descripcion;
 
-    @Column("id_estado_observacion")
+    @Column(name = "id_estado_observacion")
     private Integer estadoObservacionId;
 
-    @Column("fecha_creacion")
+    @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
 
-    @Column("id_usuario_creacion")
+    @Column(name = "id_usuario_creacion")
     private Integer usuarioCreacionId;
 
-    @Column("fecha_resolucion")
+    @Column(name = "fecha_resolucion")
     private LocalDateTime fechaResolucion;
 
-    @Column("id_usuario_resolucion")
+    @Column(name = "id_usuario_resolucion")
     private Integer usuarioResolucionId;
 
-    @Column("comentario_resolucion")
+    @Column(name = "comentario_resolucion")
     private String comentarioResolucion;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ObservacionNeumatico that = (ObservacionNeumatico) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

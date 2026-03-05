@@ -1,30 +1,34 @@
 package com.dliriotech.tms.tyreservice.entity;
 
-import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("medidas_neumatico")
+@Entity
+@Table(name = "medidas_neumatico")
 public class MedidaNeumatico {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private String descripcion;
 
-    @Column("tipo_construccion")
+    @Column(name = "tipo_construccion")
     private String tipoConstruccion;
 
-    @Column("indice_carga")
+    @Column(name = "indice_carga")
     private String indiceCarga;
 
-    @Column("simbolo_velocidad")
+    @Column(name = "simbolo_velocidad")
     private String simboloVelocidad;
 
-    @Column("ply_rating")
+    @Column(name = "ply_rating")
     private Integer plyRating;
 }

@@ -2,26 +2,33 @@ spring:
   application:
     name: tms-tyre-service
 
-  r2dbc:
+  datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASS}
-    pool:
-      initial-size: 10
-      max-size: 30
-      max-idle-time: 10m
-      max-create-connection-time: 2s
-      validation-query: SELECT 1
-      validation-depth: REMOTE
-      max-life-time: 30m
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
-      database: 0
-      timeout: 2000ms
-      client-type: lettuce
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 30
+      idle-timeout: 600000
+      connection-timeout: 2000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 16
+
+  threads:
+    virtual:
+      enabled: true
+
   lifecycle:
     timeout-per-shutdown-phase: 20s
 
@@ -51,9 +58,6 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
-    enable:
-      r2dbc:
-        client: true
 
 # Logging estructurado
 logging:
@@ -63,27 +67,14 @@ logging:
     root: INFO
     com.dliriotech.tms.tyreservice: INFO
     org.springframework.security: INFO
-    org.springframework.r2dbc: DEBUG
-    io.r2dbc.pool: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 springdoc:
   swagger-ui:
     url: /openapi.yaml
     path: /swagger-ui.html
 
-app:
-  cache:
-    ttl-hours: 24
-    user-info:
-      ttl-hours: 48
-    prefixes:
-      catalogo-neumatico: "cache:catalogoNeumatico"
-      proveedor: "cache:proveedor"
-      diseno-reencauche: "cache:disenoReencauche"
-      clasificacion-neumatico: "cache:clasificacionNeumatico"
-      marca-neumatico: "cache:marcaNeumatico"
-      medida-neumatico: "cache:medidaNeumatico"
-      user-info: "cache:userInfo"
 
 server:
   port: 8083

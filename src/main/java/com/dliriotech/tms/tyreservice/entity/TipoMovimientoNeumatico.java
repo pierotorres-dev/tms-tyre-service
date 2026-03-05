@@ -1,21 +1,22 @@
 package com.dliriotech.tms.tyreservice.entity;
 
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("tipos_movimiento_neumatico")
+@Entity
+@Table(name = "tipos_movimiento_neumatico")
 public class TipoMovimientoNeumatico {
-    
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    
+
     private String nombre;
 }
