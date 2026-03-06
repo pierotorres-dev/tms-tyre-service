@@ -20,11 +20,19 @@ public class CatalogoNeumatico {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "id_marca")
+    @Column(name = "id_marca", insertable = false, updatable = false)
     private Integer marcaId;
 
-    @Column(name = "id_medida")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_marca")
+    private MarcaNeumatico marca;
+
+    @Column(name = "id_medida", insertable = false, updatable = false)
     private Integer medidaId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_medida")
+    private MedidaNeumatico medida;
 
     @Column(name = "modelo_diseno")
     private String modeloDiseno;

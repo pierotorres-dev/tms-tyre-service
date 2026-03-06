@@ -22,8 +22,12 @@ public class Neumatico {
     @Column(name = "id_empresa")
     private Integer empresaId;
 
-    @Column(name = "id_catalogo_neumatico")
+    @Column(name = "id_catalogo_neumatico", insertable = false, updatable = false)
     private Integer catalogoNeumaticoId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_catalogo_neumatico")
+    private CatalogoNeumatico catalogoNeumatico;
 
     @Column(name = "id_equipo")
     private Integer equipoId;
@@ -36,8 +40,12 @@ public class Neumatico {
     @Column(name = "costo_inicial")
     private BigDecimal costoInicial;
 
-    @Column(name = "id_proveedor_compra")
+    @Column(name = "id_proveedor_compra", insertable = false, updatable = false)
     private Integer proveedorCompraId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_proveedor_compra")
+    private Proveedor proveedorCompra;
 
     @Column(name = "km_instalacion")
     private Integer kmInstalacion;
@@ -63,11 +71,19 @@ public class Neumatico {
     @Column(name = "numero_reencauches")
     private Integer numeroReencauches;
 
-    @Column(name = "id_diseno_reencauche_actual")
+    @Column(name = "id_diseno_reencauche_actual", insertable = false, updatable = false)
     private Integer disenoReencaucheActualId;
 
-    @Column(name = "id_clasificacion")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_diseno_reencauche_actual")
+    private DisenoReencauche disenoReencaucheActual;
+
+    @Column(name = "id_clasificacion", insertable = false, updatable = false)
     private Integer clasificacionId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_clasificacion")
+    private ClasificacionNeumatico clasificacion;
 
     @Override
     public boolean equals(Object o) {

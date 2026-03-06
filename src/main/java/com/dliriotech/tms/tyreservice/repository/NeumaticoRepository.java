@@ -20,6 +20,26 @@ public interface NeumaticoRepository extends JpaRepository<Neumatico, Integer> {
     List<Neumatico> findAllByEquipoIdAndEmpresaIdOrderByPosicionDesc(Integer equipoId, Integer empresaId);
 
     /**
+     * Obtiene todos los neumáticos de un equipo con todas las relaciones cargadas en un solo query.
+     * Elimina el problema N+1 al usar JOIN FETCH para catálogo, marca, medida, proveedor,
+     * diseño reencauche y clasificación.
+     */
+    @Query("""
+        SELECT n FROM Neumatico n
+        LEFT JOIN FETCH n.catalogoNeumatico cn
+        LEFT JOIN FETCH cn.marca
+        LEFT JOIN FETCH cn.medida
+        LEFT JOIN FETCH n.proveedorCompra
+        LEFT JOIN FETCH n.disenoReencaucheActual
+        LEFT JOIN FETCH n.clasificacion
+        WHERE n.equipoId = :equipoId AND n.empresaId = :empresaId
+        ORDER BY n.posicion DESC
+        """)
+    List<Neumatico> findAllByEquipoWithRelations(
+            @Param("equipoId") Integer equipoId,
+            @Param("empresaId") Integer empresaId);
+
+    /**
      * Busca un neumático por ID y empresa (tenant isolation).
      */
     Optional<Neumatico> findByIdAndEmpresaId(Integer id, Integer empresaId);

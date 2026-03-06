@@ -1,7 +1,7 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
 import com.dliriotech.tms.tyreservice.dto.*;
-import com.dliriotech.tms.tyreservice.entity.Neumatico;
+import com.dliriotech.tms.tyreservice.entity.*;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
 import com.dliriotech.tms.tyreservice.exception.ValidationException;
 import com.dliriotech.tms.tyreservice.exception.DataIntegrityException;
@@ -17,8 +17,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +45,27 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
         log.info("Consultando neumáticos para equipo {} empresa {}", equipoId, empresaId);
 
-        return neumaticoRepository.findAllByEquipoIdAndEmpresaIdOrderByPosicionDesc(equipoId, empresaId)
-                .stream()
-                .map(this::enrichNeumaticoWithRelations)
-                .collect(Collectors.toList());
+        // 1 solo query con JOIN FETCH: neumaticos + catalogo + marca + medida + proveedor + diseno + clasificacion
+        List<Neumatico> neumaticos = neumaticoRepository
+                .findAllByEquipoWithRelations(equipoId, empresaId);
+
+        if (neumaticos.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch RTD thresholds: 1 query equipo + 1 query config + 1 query movimientos (vs N*3 antes)
+        Map<Integer, BigDecimal> rtdOriginalMap = new HashMap<>();
+        for (Neumatico n : neumaticos) {
+            CatalogoNeumatico catalogo = n.getCatalogoNeumatico();
+            rtdOriginalMap.put(n.getId(), catalogo != null ? catalogo.getRtdOriginal() : BigDecimal.ZERO);
+        }
+
+        Map<Integer, RtdThresholdsResponse> rtdThresholdsMap = rtdThresholdService
+                .calculateRtdThresholdsBatch(neumaticos, rtdOriginalMap);
+
+        return neumaticos.stream()
+                .map(n -> mapToResponseWithPreloadedData(n, rtdThresholdsMap.get(n.getId())))
+                .toList();
     }
 
     @Override
@@ -90,12 +109,13 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
         // Actualizar campos
         existingNeumatico.setEmpresaId(request.getEmpresaId());
-        existingNeumatico.setCatalogoNeumaticoId(request.getCatalogoNeumaticoId());
+        existingNeumatico.setCatalogoNeumatico(catalogoNeumaticoRepository.getReferenceById(request.getCatalogoNeumaticoId()));
         existingNeumatico.setEquipoId(request.getEquipoId());
         existingNeumatico.setPosicion(request.getPosicion());
         existingNeumatico.setSerieCodigo(request.getSerieCodigo());
         existingNeumatico.setCostoInicial(request.getCostoInicial());
-        existingNeumatico.setProveedorCompraId(request.getProveedorCompraId());
+        existingNeumatico.setProveedorCompra(request.getProveedorCompraId() != null
+                ? proveedorRepository.getReferenceById(request.getProveedorCompraId()) : null);
         existingNeumatico.setKmInstalacion(request.getKmInstalacion());
         existingNeumatico.setFechaInstalacion(request.getFechaInstalacion());
         existingNeumatico.setRtd1(request.getRtd1());
@@ -104,8 +124,10 @@ public class NeumaticoServiceImpl implements NeumaticoService {
         existingNeumatico.setRtdActual(request.getRtdActual());
         existingNeumatico.setKmAcumulados(request.getKmAcumulados());
         existingNeumatico.setNumeroReencauches(request.getNumeroReencauches());
-        existingNeumatico.setDisenoReencaucheActualId(request.getDisenoReencaucheActualId());
-        existingNeumatico.setClasificacionId(request.getClasificacionId());
+        existingNeumatico.setDisenoReencaucheActual(request.getDisenoReencaucheActualId() != null
+                ? disenoReencaucheRepository.getReferenceById(request.getDisenoReencaucheActualId()) : null);
+        existingNeumatico.setClasificacion(request.getClasificacionId() != null
+                ? clasificacionNeumaticoRepository.getReferenceById(request.getClasificacionId()) : null);
 
         try {
             Neumatico saved = neumaticoRepository.save(existingNeumatico);
@@ -152,64 +174,208 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
     // ── Enrichment ────────────────────────────────────────────────────
 
-    private NeumaticoResponse enrichNeumaticoWithRelations(Neumatico neumatico) {
-        CatalogoNeumaticoResponse catalogoResponse = catalogoNeumaticoRepository
-                .findById(neumatico.getCatalogoNeumaticoId())
-                .map(catalogo -> {
-                    MarcaNeumaticoResponse marcaResp = marcaNeumaticoRepository.findById(catalogo.getMarcaId())
-                            .map(m -> MarcaNeumaticoResponse.builder().id(m.getId()).nombre(m.getNombre()).build())
-                            .orElse(null);
-                    MedidaNeumaticoResponse medidaResp = medidaNeumaticoRepository.findById(catalogo.getMedidaId())
-                            .map(m -> MedidaNeumaticoResponse.builder().id(m.getId()).descripcion(m.getDescripcion())
-                                    .tipoConstruccion(m.getTipoConstruccion()).indiceCarga(m.getIndiceCarga())
-                                    .simboloVelocidad(m.getSimboloVelocidad()).plyRating(m.getPlyRating()).build())
-                            .orElse(null);
-                    return CatalogoNeumaticoResponse.builder()
-                            .id(catalogo.getId()).marcaNeumaticoResponse(marcaResp).medidaNeumaticoResponse(medidaResp)
-                            .modeloDiseno(catalogo.getModeloDiseno()).tipoUso(catalogo.getTipoUso())
-                            .rtdOriginal(catalogo.getRtdOriginal()).presionMaximaPsi(catalogo.getPresionMaximaPsi())
-                            .treadwear(catalogo.getTreadwear()).traccion(catalogo.getTraccion())
-                            .temperatura(catalogo.getTemperatura()).build();
-                })
-                .orElse(CatalogoNeumaticoResponse.builder().build());
+    /**
+     * Mapea un neumático a NeumaticoResponse usando las relaciones JPA ya cargadas por JOIN FETCH.
+     * NO ejecuta queries adicionales — todo ya está en memoria.
+     * Usado por getAllNeumaticosByEquipoId (flujo optimizado de lista).
+     */
+    private NeumaticoResponse mapToResponseWithPreloadedData(Neumatico neumatico,
+                                                              RtdThresholdsResponse rtdThresholds) {
+        CatalogoNeumaticoResponse catalogoResponse = buildCatalogoResponse(neumatico.getCatalogoNeumatico());
 
-        ProveedorResponse proveedorResponse = neumatico.getProveedorCompraId() != null
-                ? proveedorRepository.findById(neumatico.getProveedorCompraId())
+        ProveedorResponse proveedorResponse = neumatico.getProveedorCompra() != null
+                ? ProveedorResponse.builder()
+                    .id(neumatico.getProveedorCompra().getId())
+                    .nombre(neumatico.getProveedorCompra().getNombre())
+                    .tipo(neumatico.getProveedorCompra().getTipo())
+                    .ruc(neumatico.getProveedorCompra().getRuc())
+                    .build()
+                : null;
+
+        DisenoReencaucheResponse disenoResponse = neumatico.getDisenoReencaucheActual() != null
+                ? DisenoReencaucheResponse.builder()
+                    .id(neumatico.getDisenoReencaucheActual().getId())
+                    .nombreDiseno(neumatico.getDisenoReencaucheActual().getNombreDiseno())
+                    .proveedorReencauche(neumatico.getDisenoReencaucheActual().getProveedorReencauche())
+                    .build()
+                : null;
+
+        ClasificacionNeumaticoResponse clasificacionResponse = neumatico.getClasificacion() != null
+                ? ClasificacionNeumaticoResponse.builder()
+                    .id(neumatico.getClasificacion().getId())
+                    .nombre(neumatico.getClasificacion().getNombre())
+                    .descripcion(neumatico.getClasificacion().getDescripcion())
+                    .build()
+                : null;
+
+        String disenoVigente = buildDisenoVigente(neumatico, disenoResponse, catalogoResponse);
+        String estadoReencauche = buildEstadoReencauche(neumatico);
+
+        return buildNeumaticoResponse(neumatico, catalogoResponse, proveedorResponse,
+                disenoResponse, clasificacionResponse, rtdThresholds, disenoVigente, estadoReencauche);
+    }
+
+    /**
+     * Enriquece un neumático individual cargando relaciones desde los objetos JPA o repositorios.
+     * Usado por save/update donde se maneja un solo neumático y no se usa JOIN FETCH.
+     */
+    private NeumaticoResponse enrichNeumaticoWithRelations(Neumatico neumatico) {
+        // Resolver catálogo: usar relación JPA si está cargada, sino buscar por ID
+        CatalogoNeumatico catalogo = neumatico.getCatalogoNeumatico() != null
+                ? neumatico.getCatalogoNeumatico()
+                : (neumatico.getCatalogoNeumaticoId() != null
+                    ? catalogoNeumaticoRepository.findById(neumatico.getCatalogoNeumaticoId()).orElse(null)
+                    : null);
+
+        CatalogoNeumaticoResponse catalogoResponse;
+        if (catalogo != null) {
+            // Cargar marca y medida si no están ya en la relación
+            MarcaNeumaticoResponse marcaResp = null;
+            if (catalogo.getMarca() != null) {
+                marcaResp = MarcaNeumaticoResponse.builder()
+                        .id(catalogo.getMarca().getId()).nombre(catalogo.getMarca().getNombre()).build();
+            } else if (catalogo.getMarcaId() != null) {
+                marcaResp = marcaNeumaticoRepository.findById(catalogo.getMarcaId())
+                        .map(m -> MarcaNeumaticoResponse.builder().id(m.getId()).nombre(m.getNombre()).build())
+                        .orElse(null);
+            }
+
+            MedidaNeumaticoResponse medidaResp = null;
+            if (catalogo.getMedida() != null) {
+                medidaResp = MedidaNeumaticoResponse.builder()
+                        .id(catalogo.getMedida().getId()).descripcion(catalogo.getMedida().getDescripcion())
+                        .tipoConstruccion(catalogo.getMedida().getTipoConstruccion())
+                        .indiceCarga(catalogo.getMedida().getIndiceCarga())
+                        .simboloVelocidad(catalogo.getMedida().getSimboloVelocidad())
+                        .plyRating(catalogo.getMedida().getPlyRating()).build();
+            } else if (catalogo.getMedidaId() != null) {
+                medidaResp = medidaNeumaticoRepository.findById(catalogo.getMedidaId())
+                        .map(m -> MedidaNeumaticoResponse.builder().id(m.getId()).descripcion(m.getDescripcion())
+                                .tipoConstruccion(m.getTipoConstruccion()).indiceCarga(m.getIndiceCarga())
+                                .simboloVelocidad(m.getSimboloVelocidad()).plyRating(m.getPlyRating()).build())
+                        .orElse(null);
+            }
+
+            catalogoResponse = CatalogoNeumaticoResponse.builder()
+                    .id(catalogo.getId()).marcaNeumaticoResponse(marcaResp).medidaNeumaticoResponse(medidaResp)
+                    .modeloDiseno(catalogo.getModeloDiseno()).tipoUso(catalogo.getTipoUso())
+                    .rtdOriginal(catalogo.getRtdOriginal()).presionMaximaPsi(catalogo.getPresionMaximaPsi())
+                    .treadwear(catalogo.getTreadwear()).traccion(catalogo.getTraccion())
+                    .temperatura(catalogo.getTemperatura()).build();
+        } else {
+            catalogoResponse = CatalogoNeumaticoResponse.builder().build();
+        }
+
+        ProveedorResponse proveedorResponse = null;
+        if (neumatico.getProveedorCompra() != null) {
+            Proveedor p = neumatico.getProveedorCompra();
+            proveedorResponse = ProveedorResponse.builder()
+                    .id(p.getId()).nombre(p.getNombre()).tipo(p.getTipo()).ruc(p.getRuc()).build();
+        } else if (neumatico.getProveedorCompraId() != null) {
+            proveedorResponse = proveedorRepository.findById(neumatico.getProveedorCompraId())
                     .map(p -> ProveedorResponse.builder().id(p.getId()).nombre(p.getNombre())
                             .tipo(p.getTipo()).ruc(p.getRuc()).build())
-                    .orElse(null)
-                : null;
+                    .orElse(null);
+        }
 
-        DisenoReencaucheResponse disenoResponse = neumatico.getDisenoReencaucheActualId() != null
-                ? disenoReencaucheRepository.findById(neumatico.getDisenoReencaucheActualId())
+        DisenoReencaucheResponse disenoResponse = null;
+        if (neumatico.getDisenoReencaucheActual() != null) {
+            DisenoReencauche d = neumatico.getDisenoReencaucheActual();
+            disenoResponse = DisenoReencaucheResponse.builder()
+                    .id(d.getId()).nombreDiseno(d.getNombreDiseno())
+                    .proveedorReencauche(d.getProveedorReencauche()).build();
+        } else if (neumatico.getDisenoReencaucheActualId() != null) {
+            disenoResponse = disenoReencaucheRepository.findById(neumatico.getDisenoReencaucheActualId())
                     .map(d -> DisenoReencaucheResponse.builder().id(d.getId()).nombreDiseno(d.getNombreDiseno())
                             .proveedorReencauche(d.getProveedorReencauche()).build())
-                    .orElse(null)
-                : null;
+                    .orElse(null);
+        }
 
-        ClasificacionNeumaticoResponse clasificacionResponse = neumatico.getClasificacionId() != null
-                ? clasificacionNeumaticoRepository.findById(neumatico.getClasificacionId())
+        ClasificacionNeumaticoResponse clasificacionResponse = null;
+        if (neumatico.getClasificacion() != null) {
+            ClasificacionNeumatico c = neumatico.getClasificacion();
+            clasificacionResponse = ClasificacionNeumaticoResponse.builder()
+                    .id(c.getId()).nombre(c.getNombre()).descripcion(c.getDescripcion()).build();
+        } else if (neumatico.getClasificacionId() != null) {
+            clasificacionResponse = clasificacionNeumaticoRepository.findById(neumatico.getClasificacionId())
                     .map(c -> ClasificacionNeumaticoResponse.builder().id(c.getId()).nombre(c.getNombre())
                             .descripcion(c.getDescripcion()).build())
-                    .orElse(null)
-                : null;
+                    .orElse(null);
+        }
 
         RtdThresholdsResponse rtdThresholds = rtdThresholdService
                 .calculateRtdThresholds(neumatico, catalogoResponse.getRtdOriginal());
 
-        // Lógica de diseño vigente y estado reencauche
-        String disenoVigente;
-        if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
-            disenoVigente = disenoResponse != null ? disenoResponse.getNombreDiseno() : null;
-        } else {
-            disenoVigente = catalogoResponse.getModeloDiseno();
+        String disenoVigente = buildDisenoVigente(neumatico, disenoResponse, catalogoResponse);
+        String estadoReencauche = buildEstadoReencauche(neumatico);
+
+        return buildNeumaticoResponse(neumatico, catalogoResponse, proveedorResponse,
+                disenoResponse, clasificacionResponse, rtdThresholds, disenoVigente, estadoReencauche);
+    }
+
+    // ── Helpers de Construcción DTO ───────────────────────────────────
+
+    private CatalogoNeumaticoResponse buildCatalogoResponse(CatalogoNeumatico catalogo) {
+        if (catalogo == null) {
+            return CatalogoNeumaticoResponse.builder().build();
         }
 
-        String estadoReencauche = "Nuevo";
-        if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
-            estadoReencauche = "R" + neumatico.getNumeroReencauches();
-        }
+        MarcaNeumaticoResponse marcaResp = catalogo.getMarca() != null
+                ? MarcaNeumaticoResponse.builder()
+                    .id(catalogo.getMarca().getId())
+                    .nombre(catalogo.getMarca().getNombre())
+                    .build()
+                : null;
 
+        MedidaNeumaticoResponse medidaResp = catalogo.getMedida() != null
+                ? MedidaNeumaticoResponse.builder()
+                    .id(catalogo.getMedida().getId())
+                    .descripcion(catalogo.getMedida().getDescripcion())
+                    .tipoConstruccion(catalogo.getMedida().getTipoConstruccion())
+                    .indiceCarga(catalogo.getMedida().getIndiceCarga())
+                    .simboloVelocidad(catalogo.getMedida().getSimboloVelocidad())
+                    .plyRating(catalogo.getMedida().getPlyRating())
+                    .build()
+                : null;
+
+        return CatalogoNeumaticoResponse.builder()
+                .id(catalogo.getId())
+                .marcaNeumaticoResponse(marcaResp)
+                .medidaNeumaticoResponse(medidaResp)
+                .modeloDiseno(catalogo.getModeloDiseno())
+                .tipoUso(catalogo.getTipoUso())
+                .rtdOriginal(catalogo.getRtdOriginal())
+                .presionMaximaPsi(catalogo.getPresionMaximaPsi())
+                .treadwear(catalogo.getTreadwear())
+                .traccion(catalogo.getTraccion())
+                .temperatura(catalogo.getTemperatura())
+                .build();
+    }
+
+    private String buildDisenoVigente(Neumatico neumatico,
+                                       DisenoReencaucheResponse disenoResponse,
+                                       CatalogoNeumaticoResponse catalogoResponse) {
+        if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
+            return disenoResponse != null ? disenoResponse.getNombreDiseno() : null;
+        }
+        return catalogoResponse.getModeloDiseno();
+    }
+
+    private String buildEstadoReencauche(Neumatico neumatico) {
+        if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
+            return "R" + neumatico.getNumeroReencauches();
+        }
+        return "Nuevo";
+    }
+
+    private NeumaticoResponse buildNeumaticoResponse(Neumatico neumatico,
+                                                      CatalogoNeumaticoResponse catalogoResponse,
+                                                      ProveedorResponse proveedorResponse,
+                                                      DisenoReencaucheResponse disenoResponse,
+                                                      ClasificacionNeumaticoResponse clasificacionResponse,
+                                                      RtdThresholdsResponse rtdThresholds,
+                                                      String disenoVigente,
+                                                      String estadoReencauche) {
         return NeumaticoResponse.builder()
                 .id(neumatico.getId())
                 .empresaId(neumatico.getEmpresaId())
@@ -239,14 +405,12 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     // ── Mappers ───────────────────────────────────────────────────────
 
     private Neumatico mapRequestToEntity(NeumaticoRequest request) {
-        return Neumatico.builder()
+        Neumatico entity = Neumatico.builder()
                 .empresaId(request.getEmpresaId())
-                .catalogoNeumaticoId(request.getCatalogoNeumaticoId())
                 .equipoId(request.getEquipoId())
                 .posicion(request.getPosicion())
                 .serieCodigo(request.getSerieCodigo())
                 .costoInicial(request.getCostoInicial())
-                .proveedorCompraId(request.getProveedorCompraId())
                 .kmInstalacion(request.getKmInstalacion())
                 .fechaInstalacion(request.getFechaInstalacion())
                 .rtd1(request.getRtd1())
@@ -256,9 +420,22 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 .kmAcumulados(request.getKmAcumulados())
                 .kmCicloActual(request.getKmCicloActual())
                 .numeroReencauches(request.getNumeroReencauches())
-                .disenoReencaucheActualId(request.getDisenoReencaucheActualId())
-                .clasificacionId(request.getClasificacionId())
                 .build();
+
+        // Usar referencias JPA (proxy sin query) para las relaciones @ManyToOne
+        entity.setCatalogoNeumatico(catalogoNeumaticoRepository.getReferenceById(request.getCatalogoNeumaticoId()));
+
+        if (request.getProveedorCompraId() != null) {
+            entity.setProveedorCompra(proveedorRepository.getReferenceById(request.getProveedorCompraId()));
+        }
+        if (request.getDisenoReencaucheActualId() != null) {
+            entity.setDisenoReencaucheActual(disenoReencaucheRepository.getReferenceById(request.getDisenoReencaucheActualId()));
+        }
+        if (request.getClasificacionId() != null) {
+            entity.setClasificacion(clasificacionNeumaticoRepository.getReferenceById(request.getClasificacionId()));
+        }
+
+        return entity;
     }
 
     private RuntimeException handleDataIntegrityViolation(DataIntegrityViolationException ex, NeumaticoRequest request) {

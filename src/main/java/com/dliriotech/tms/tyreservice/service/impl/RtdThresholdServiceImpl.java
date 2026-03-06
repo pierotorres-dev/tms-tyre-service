@@ -16,6 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +44,69 @@ public class RtdThresholdServiceImpl implements RtdThresholdService {
                 .rtdMinimo(rtdMinimo)
                 .rtdMaximo(rtdMaximo)
                 .build();
+    }
+
+    @Override
+    public Map<Integer, RtdThresholdsResponse> calculateRtdThresholdsBatch(
+            List<Neumatico> neumaticos,
+            Map<Integer, BigDecimal> rtdOriginalByNeumaticoId) {
+
+        if (neumaticos.isEmpty()) {
+            return Map.of();
+        }
+
+        log.debug("Calculando umbrales RTD en batch para {} neumáticos", neumaticos.size());
+
+        // 1. Pre-cargar RTD mínimo: todos comparten el mismo equipoId → 1 query equipo + 1 query config
+        BigDecimal rtdMinimoBatch = calculateRtdMinimoBatch(neumaticos.getFirst());
+
+        // 2. Pre-cargar movimientos de reencauche en batch para los que tienen reencauches
+        List<Integer> neumaticoIdsConReencauche = neumaticos.stream()
+                .filter(n -> n.getNumeroReencauches() != null && n.getNumeroReencauches() > 0)
+                .map(Neumatico::getId)
+                .toList();
+
+        Map<Integer, BigDecimal> rtdPostReencaucheByNeumaticoId = new HashMap<>();
+        if (!neumaticoIdsConReencauche.isEmpty()) {
+            List<MovimientoNeumatico> ultimosReencauches = movimientoNeumaticoRepository
+                    .findLastMovimientosByNeumaticoIdsAndTipo(neumaticoIdsConReencauche, TIPO_MOVIMIENTO_REENCAUCHE_ID);
+
+            rtdPostReencaucheByNeumaticoId = ultimosReencauches.stream()
+                    .collect(Collectors.toMap(
+                            MovimientoNeumatico::getNeumaticoId,
+                            m -> m.getRtdPostReencauche() != null ? m.getRtdPostReencauche() : BigDecimal.ZERO
+                    ));
+        }
+
+        // 3. Construir resultado
+        Map<Integer, RtdThresholdsResponse> result = new HashMap<>();
+        for (Neumatico neumatico : neumaticos) {
+            BigDecimal rtdOriginal = rtdOriginalByNeumaticoId.getOrDefault(neumatico.getId(), BigDecimal.ZERO);
+            BigDecimal rtdMaximo;
+
+            if (neumatico.getNumeroReencauches() != null && neumatico.getNumeroReencauches() > 0) {
+                rtdMaximo = rtdPostReencaucheByNeumaticoId.getOrDefault(
+                        neumatico.getId(),
+                        rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO);
+            } else {
+                rtdMaximo = rtdOriginal != null ? rtdOriginal : BigDecimal.ZERO;
+            }
+
+            result.put(neumatico.getId(), RtdThresholdsResponse.builder()
+                    .rtdMinimo(rtdMinimoBatch)
+                    .rtdMaximo(rtdMaximo)
+                    .build());
+        }
+
+        return result;
+    }
+
+    /**
+     * Calcula el RTD mínimo una sola vez para un lote de neumáticos del mismo equipo.
+     * Como todos comparten equipoId, el resultado es el mismo para todos.
+     */
+    private BigDecimal calculateRtdMinimoBatch(Neumatico sampleNeumatico) {
+        return calculateRtdMinimo(sampleNeumatico);
     }
 
     /**
