@@ -1,5 +1,6 @@
 package com.dliriotech.tms.tyreservice.service.impl;
 
+import com.dliriotech.tms.tyreservice.constants.EstadoObservacionConstants;
 import com.dliriotech.tms.tyreservice.dto.*;
 import com.dliriotech.tms.tyreservice.entity.*;
 import com.dliriotech.tms.tyreservice.exception.NeumaticoException;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class NeumaticoServiceImpl implements NeumaticoService {
 
     private final NeumaticoRepository neumaticoRepository;
+    private final ObservacionNeumaticoRepository observacionNeumaticoRepository;
     private final CatalogoNeumaticoRepository catalogoNeumaticoRepository;
     private final ProveedorRepository proveedorRepository;
     private final DisenoReencaucheRepository disenoReencaucheRepository;
@@ -38,7 +40,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId) {
+    public EquipoNeumaticoResponse getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId) {
         if (equipoId == null || equipoId <= 0) {
             throw new ValidationException("equipoId", "debe ser un número positivo válido");
         }
@@ -50,7 +52,11 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 .findAllByEquipoWithRelations(equipoId, empresaId);
 
         if (neumaticos.isEmpty()) {
-            return List.of();
+            return EquipoNeumaticoResponse.builder()
+                    .equipoId(equipoId)
+                    .neumaticos(List.of())
+                    .observacionesPendientes(List.of())
+                    .build();
         }
 
         // Batch RTD thresholds: 1 query equipo + 1 query config + 1 query movimientos (vs N*3 antes)
@@ -63,9 +69,25 @@ public class NeumaticoServiceImpl implements NeumaticoService {
         Map<Integer, RtdThresholdsResponse> rtdThresholdsMap = rtdThresholdService
                 .calculateRtdThresholdsBatch(neumaticos, rtdOriginalMap);
 
-        return neumaticos.stream()
+        List<NeumaticoResponse> neumaticoResponses = neumaticos.stream()
                 .map(n -> mapToResponseWithPreloadedData(n, rtdThresholdsMap.get(n.getId())))
                 .toList();
+
+        // 1 query adicional: observaciones pendientes de todo el equipo (usando ID hardcodeado)
+        List<ObservacionPendienteResponse> observacionesPendientes = observacionNeumaticoRepository
+                .findByEquipoIdAndEmpresaIdAndEstadoObservacionId(equipoId, empresaId, EstadoObservacionConstants.ID_PENDIENTE)
+                .stream()
+                .map(this::mapToObservacionPendienteResponse)
+                .toList();
+
+        log.info("Equipo {}: {} neumáticos, {} observaciones pendientes",
+                equipoId, neumaticoResponses.size(), observacionesPendientes.size());
+
+        return EquipoNeumaticoResponse.builder()
+                .equipoId(equipoId)
+                .neumaticos(neumaticoResponses)
+                .observacionesPendientes(observacionesPendientes)
+                .build();
     }
 
     @Override
@@ -403,6 +425,17 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     }
 
     // ── Mappers ───────────────────────────────────────────────────────
+
+    private ObservacionPendienteResponse mapToObservacionPendienteResponse(ObservacionNeumatico obs) {
+        return ObservacionPendienteResponse.builder()
+                .id(obs.getId())
+                .neumaticoId(obs.getNeumaticoId())
+                .posicion(obs.getPosicion())
+                .tipoObservacionId(obs.getTipoObservacionId())
+                .descripcion(obs.getDescripcion())
+                .fechaCreacion(obs.getFechaCreacion())
+                .build();
+    }
 
     private Neumatico mapRequestToEntity(NeumaticoRequest request) {
         Neumatico entity = Neumatico.builder()

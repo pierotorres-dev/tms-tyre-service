@@ -3,11 +3,9 @@ package com.dliriotech.tms.tyreservice.service.impl;
 import com.dliriotech.tms.tyreservice.constants.EstadoObservacionConstants;
 import com.dliriotech.tms.tyreservice.constants.HeaderConstants;
 import com.dliriotech.tms.tyreservice.dto.*;
-import com.dliriotech.tms.tyreservice.entity.EstadoObservacion;
 import com.dliriotech.tms.tyreservice.entity.Neumatico;
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
 import com.dliriotech.tms.tyreservice.exception.ObservacionCreationException;
-import com.dliriotech.tms.tyreservice.exception.ObservacionMasterDataException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionProcessingException;
 import com.dliriotech.tms.tyreservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.tyreservice.repository.*;
@@ -20,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +28,6 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
     private final MapaObservacionSolucionRepository mapaObservacionSolucionRepository;
     private final ObservacionNeumaticoRepository observacionNeumaticoRepository;
-    private final EstadoObservacionRepository estadoObservacionRepository;
     private final TipoObservacionRepository tipoObservacionRepository;
     private final AuthUserRepository authUserRepository;
     private final NeumaticoRepository neumaticoRepository;
@@ -47,8 +45,6 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionProcessingException.invalidTipoMovimiento(tipoMovimientoId);
         }
 
-        Integer estadoPendienteId = getEstadoPendienteId();
-
         List<Integer> tipoObservacionIds = mapaObservacionSolucionRepository
                 .findTipoObservacionIdsByTipoMovimientoId(tipoMovimientoId);
         if (tipoObservacionIds.isEmpty()) {
@@ -57,7 +53,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
         return observacionNeumaticoRepository
                 .findByNeumaticoIdAndEmpresaIdAndTipoObservacionIdsAndEstadoObservacionId(
-                        neumaticoId, empresaId, tipoObservacionIds, estadoPendienteId)
+                        neumaticoId, empresaId, tipoObservacionIds, EstadoObservacionConstants.ID_PENDIENTE)
                 .stream()
                 .map(this::enrichObservacionWithRelations)
                 .collect(Collectors.toList());
@@ -88,11 +84,9 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionProcessingException.invalidNeumaticoId(neumaticoId);
         }
 
-        Integer estadoPendienteId = getEstadoPendienteId();
-
         return observacionNeumaticoRepository
                 .findByNeumaticoIdAndEmpresaIdAndEstadoObservacionIdOrderByFechaCreacionDesc(
-                        neumaticoId, empresaId, estadoPendienteId)
+                        neumaticoId, empresaId, EstadoObservacionConstants.ID_PENDIENTE)
                 .stream()
                 .map(this::enrichObservacionWithRelations)
                 .collect(Collectors.toList());
@@ -107,10 +101,8 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionProcessingException.invalidEquipoId(equipoId);
         }
 
-        Integer estadoPendienteId = getEstadoPendienteId();
-
         return observacionNeumaticoRepository
-                .findByEquipoIdAndEmpresaIdAndEstadoObservacionId(equipoId, empresaId, estadoPendienteId)
+                .findByEquipoIdAndEmpresaIdAndEstadoObservacionId(equipoId, empresaId, EstadoObservacionConstants.ID_PENDIENTE)
                 .stream()
                 .map(this::enrichObservacionWithRelations)
                 .collect(Collectors.toList());
@@ -123,13 +115,11 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
         validateObservacionRequest(request);
 
-        Integer estadoPendienteId = getEstadoPendienteId();
-
         // Validar que el tipo de observación existe
         tipoObservacionRepository.findById(request.getTipoObservacionId())
                 .orElseThrow(() -> ObservacionCreationException.tipoObservacionNotFound(request.getTipoObservacionId()));
 
-        ObservacionNeumatico entity = buildObservacionEntity(request, estadoPendienteId);
+        ObservacionNeumatico entity = buildObservacionEntity(request);
         ObservacionNeumatico saved = observacionNeumaticoRepository.save(entity);
 
         log.info("Observación creada exitosamente con ID: {}", saved.getId());
@@ -152,10 +142,14 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
             throw ObservacionUpdateException.notFound(id);
         }
 
-        // Validar que el nuevo estado existe (si se está actualizando)
+        // Validar que el nuevo estado es un ID conocido (si se está actualizando)
         if (request.getEstadoObservacionId() != null) {
-            estadoObservacionRepository.findById(request.getEstadoObservacionId())
-                    .orElseThrow(() -> ObservacionUpdateException.estadoNotFound(request.getEstadoObservacionId()));
+            int newId = request.getEstadoObservacionId();
+            if (newId != EstadoObservacionConstants.ID_PENDIENTE
+                    && newId != EstadoObservacionConstants.ID_RESUELTA
+                    && newId != EstadoObservacionConstants.ID_CANCELADA) {
+                throw ObservacionUpdateException.estadoNotFound(newId);
+            }
         }
 
         // Validar reglas de negocio y aplicar cambios
@@ -170,10 +164,32 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
 
     // ── Helpers privados ─────────────────────────────────────────────
 
-    private Integer getEstadoPendienteId() {
-        return estadoObservacionRepository.findByNombre(EstadoObservacionConstants.PENDIENTE)
-                .map(EstadoObservacion::getId)
-                .orElseThrow(() -> ObservacionMasterDataException.estadoNotFound(EstadoObservacionConstants.PENDIENTE));
+    /**
+     * Mapa estático de estados de observación.
+     * Evita queries a BD para datos de referencia que no cambian.
+     * Si se agregan nuevos estados en BD, actualizar aquí y en EstadoObservacionConstants.
+     */
+    private static final Map<Integer, EstadoObservacionResponse> ESTADO_OBSERVACION_MAP = Map.of(
+            EstadoObservacionConstants.ID_PENDIENTE,
+            EstadoObservacionResponse.builder()
+                    .id(EstadoObservacionConstants.ID_PENDIENTE)
+                    .nombre(EstadoObservacionConstants.PENDIENTE)
+                    .descripcion("Observación registrada pero aún no atendida").build(),
+            EstadoObservacionConstants.ID_RESUELTA,
+            EstadoObservacionResponse.builder()
+                    .id(EstadoObservacionConstants.ID_RESUELTA)
+                    .nombre(EstadoObservacionConstants.RESUELTO)
+                    .descripcion("Observación completamente resuelta").build(),
+            EstadoObservacionConstants.ID_CANCELADA,
+            EstadoObservacionResponse.builder()
+                    .id(EstadoObservacionConstants.ID_CANCELADA)
+                    .nombre(EstadoObservacionConstants.CANCELADO)
+                    .descripcion("Observación cancelada o no aplicable").build()
+    );
+
+    private EstadoObservacionResponse resolveEstadoObservacion(Integer estadoId) {
+        if (estadoId == null) return null;
+        return ESTADO_OBSERVACION_MAP.get(estadoId);
     }
 
     private void validateObservacionRequest(ObservacionNeumaticoNuevoRequest request) {
@@ -222,31 +238,31 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
     }
 
     private void validateBusinessRules(ObservacionNeumatico existing, ObservacionNeumaticoUpdateRequest request) {
-        EstadoObservacion currentState = estadoObservacionRepository.findById(existing.getEstadoObservacionId())
-                .orElseThrow(() -> ObservacionMasterDataException.estadoNotFound(
-                        "id=" + existing.getEstadoObservacionId()));
-        String currentStateName = currentState.getNombre();
+        int currentStateId = existing.getEstadoObservacionId();
 
-        if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(currentStateName)) {
+        // Estados finales: no se pueden modificar
+        if (currentStateId == EstadoObservacionConstants.ID_RESUELTA) {
             throw ObservacionUpdateException.alreadyResolved(existing.getId());
         }
-        if (EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(currentStateName)) {
-            throw ObservacionUpdateException.invalidStateTransition(currentStateName, "cualquier estado");
+        if (currentStateId == EstadoObservacionConstants.ID_CANCELADA) {
+            throw ObservacionUpdateException.invalidStateTransition(
+                    EstadoObservacionConstants.CANCELADO, "cualquier estado");
         }
 
+        // Transiciones válidas desde Pendiente: solo a Resuelta o Cancelada
         if (request.getEstadoObservacionId() != null
                 && !request.getEstadoObservacionId().equals(existing.getEstadoObservacionId())) {
-            EstadoObservacion newState = estadoObservacionRepository.findById(request.getEstadoObservacionId())
-                    .orElseThrow(() -> ObservacionUpdateException.estadoNotFound(request.getEstadoObservacionId()));
-            String newStateName = newState.getNombre();
+            int newStateId = request.getEstadoObservacionId();
 
-            if (EstadoObservacionConstants.PENDIENTE.equalsIgnoreCase(currentStateName)) {
-                if (!EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(newStateName)
-                        && !EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(newStateName)) {
-                    throw ObservacionUpdateException.invalidStateTransition(currentStateName, newStateName);
+            if (currentStateId == EstadoObservacionConstants.ID_PENDIENTE) {
+                if (newStateId != EstadoObservacionConstants.ID_RESUELTA
+                        && newStateId != EstadoObservacionConstants.ID_CANCELADA) {
+                    throw ObservacionUpdateException.invalidStateTransition(
+                            EstadoObservacionConstants.PENDIENTE, "estado id=" + newStateId);
                 }
             } else {
-                throw ObservacionUpdateException.invalidStateTransition(currentStateName, newStateName);
+                throw ObservacionUpdateException.invalidStateTransition(
+                        "estado id=" + currentStateId, "estado id=" + newStateId);
             }
         }
     }
@@ -276,14 +292,14 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
         return builder.build();
     }
 
-    private ObservacionNeumatico buildObservacionEntity(ObservacionNeumaticoNuevoRequest request, Integer estadoPendienteId) {
+    private ObservacionNeumatico buildObservacionEntity(ObservacionNeumaticoNuevoRequest request) {
         return ObservacionNeumatico.builder()
                 .neumaticoId(request.getNeumaticoId())
                 .equipoId(request.getEquipoId())
                 .posicion(request.getPosicion())
                 .tipoObservacionId(request.getTipoObservacionId())
                 .descripcion(request.getDescripcion().trim())
-                .estadoObservacionId(estadoPendienteId)
+                .estadoObservacionId(EstadoObservacionConstants.ID_PENDIENTE)
                 .fechaCreacion(LocalDateTime.now(ZoneId.of("America/Lima")))
                 .usuarioCreacionId(request.getUsuarioCreacionId())
                 .fechaResolucion(null)
@@ -303,14 +319,7 @@ public class ObservacionNeumaticoServiceImpl implements ObservacionNeumaticoServ
                     .orElse(null);
         }
 
-        EstadoObservacionResponse estadoObservacionResponse = null;
-        if (observacion.getEstadoObservacionId() != null) {
-            estadoObservacionResponse = estadoObservacionRepository.findById(observacion.getEstadoObservacionId())
-                    .map(estado -> EstadoObservacionResponse.builder()
-                            .id(estado.getId()).nombre(estado.getNombre())
-                            .descripcion(estado.getDescripcion()).build())
-                    .orElse(null);
-        }
+        EstadoObservacionResponse estadoObservacionResponse = resolveEstadoObservacion(observacion.getEstadoObservacionId());
 
         UserInfoResponse usuarioInfo = null;
         if (observacion.getUsuarioCreacionId() != null) {

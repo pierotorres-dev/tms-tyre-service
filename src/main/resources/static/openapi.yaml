@@ -41,69 +41,79 @@ paths:
           example: 123
       responses:
         '200':
-          description: Lista de neumáticos obtenida exitosamente
+          description: Neumáticos y observaciones pendientes del equipo obtenidos exitosamente
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/NeumaticoResponse'
+                $ref: '#/components/schemas/EquipoNeumaticoResponse'
               examples:
                 success:
-                  summary: Respuesta exitosa con neumáticos
+                  summary: Respuesta exitosa con neumáticos y observaciones pendientes
                   value:
-                    - id: 1
-                      empresaId: 1
-                      catalogoNeumaticoResponse:
-                        id: 1
-                        marcaNeumaticoResponse:
+                    equipoId: 123
+                    neumaticos:
+                      - id: 1
+                        empresaId: 1
+                        catalogoNeumaticoResponse:
                           id: 1
-                          nombre: "Bridgestone"
-                        medidaNeumaticoResponse:
+                          marcaNeumaticoResponse:
+                            id: 1
+                            nombre: "Bridgestone"
+                          medidaNeumaticoResponse:
+                            id: 1
+                            descripcion: "11R22.5"
+                            tipoConstruccion: "Radial"
+                            indiceCarga: "146/143"
+                            simboloVelocidad: "L"
+                            plyRating: 16
+                          modeloDiseno: "M840"
+                          tipoUso: "Carretera"
+                          rtdOriginal: 18.5
+                          presionMaximaPsi: 120
+                          treadwear: 300
+                          traccion: "A"
+                          temperatura: "B"
+                        equipoId: 123
+                        posicion: 1
+                        serieCodigo: "NEU-001-2023"
+                        costoInicial: 850.00
+                        proveedorResponse:
                           id: 1
-                          descripcion: "11R22.5"
-                          tipoConstruccion: "Radial"
-                          indiceCarga: "146/143"
-                          simboloVelocidad: "L"
-                          plyRating: 16
-                        modeloDiseno: "M840"
-                        tipoUso: "Carretera"
-                        rtdOriginal: 18.5
-                        presionMaximaPsi: 120
-                        treadwear: 300
-                        traccion: "A"
-                        temperatura: "B"
-                      equipoId: 123
-                      posicion: 1
-                      serieCodigo: "NEU-001-2023"
-                      costoInicial: 850.00
-                      proveedorResponse:
-                        id: 1
-                        nombre: "Proveedor ABC"
-                        ruc: "20123456789"
-                      kmInstalacion: 15000
-                      fechaInstalacion: "2023-01-15"
-                      rtd1: 18.2
-                      rtd2: 18.1
-                      rtd3: 18.0
-                      rtdActual: 12.5
-                      kmAcumulados: 75000
-                      kmCicloActual: 60000
-                      numeroReencauches: 1
-                      disenoReencaucheResponse:
-                        id: 1
-                        nombreDiseno: "Highway Plus"
-                        proveedorReencauche: "Reencauches SA"
-                      clasificacionNeumaticoResponse:
-                        id: 1
-                        nombre: "Premium"
-                        descripcion: "Neumático de alta calidad"
-                      rtdThresholds:
-                        rtdMinimo: 3.0
-                        rtdMaximo: 20.0
+                          nombre: "Proveedor ABC"
+                          ruc: "20123456789"
+                        kmInstalacion: 15000
+                        fechaInstalacion: "2023-01-15"
+                        rtd1: 18.2
+                        rtd2: 18.1
+                        rtd3: 18.0
+                        rtdActual: 12.5
+                        kmAcumulados: 75000
+                        kmCicloActual: 60000
+                        numeroReencauches: 1
+                        disenoReencaucheResponse:
+                          id: 1
+                          nombreDiseno: "Highway Plus"
+                          proveedorReencauche: "Reencauches SA"
+                        clasificacionNeumaticoResponse:
+                          id: 1
+                          nombre: "Premium"
+                          descripcion: "Neumático de alta calidad"
+                        rtdThresholds:
+                          rtdMinimo: 3.0
+                          rtdMaximo: 20.0
+                    observacionesPendientes:
+                      - id: 12
+                        neumaticoId: 1
+                        posicion: 1
+                        tipoObservacionId: 3
+                        descripcion: "Desgaste irregular detectado en inspección"
+                        fechaCreacion: "2023-08-05 14:30:00"
                 empty:
                   summary: No hay neumáticos para el equipo
-                  value: []
+                  value:
+                    equipoId: 123
+                    neumaticos: []
+                    observacionesPendientes: []
         '400':
           description: Parámetros de entrada inválidos
           content:
@@ -732,6 +742,60 @@ paths:
 
 components:
   schemas:
+    EquipoNeumaticoResponse:
+      type: object
+      description: Wrapper que agrupa neumáticos y observaciones pendientes de un equipo
+      properties:
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo
+          example: 123
+        neumaticos:
+          type: array
+          description: Lista de neumáticos del equipo
+          items:
+            $ref: '#/components/schemas/NeumaticoResponse'
+        observacionesPendientes:
+          type: array
+          description: Observaciones en estado Pendiente asociadas a los neumáticos del equipo
+          items:
+            $ref: '#/components/schemas/ObservacionPendienteResponse'
+
+    ObservacionPendienteResponse:
+      type: object
+      description: Observación pendiente de resolución asociada a un neumático
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: ID de la observación
+          example: 12
+        neumaticoId:
+          type: integer
+          format: int32
+          description: ID del neumático asociado
+          example: 1
+        posicion:
+          type: integer
+          format: int32
+          description: Posición del neumático en el equipo
+          example: 1
+        tipoObservacionId:
+          type: integer
+          format: int32
+          description: ID del tipo de observación
+          example: 3
+        descripcion:
+          type: string
+          description: Descripción de la observación
+          example: "Desgaste irregular detectado en inspección"
+        fechaCreacion:
+          type: string
+          format: date-time
+          description: Fecha de creación de la observación
+          example: "2023-08-05 14:30:00"
+
     NeumaticoResponse:
       type: object
       properties:

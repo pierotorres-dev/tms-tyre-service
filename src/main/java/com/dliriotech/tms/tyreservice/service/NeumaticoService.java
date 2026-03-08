@@ -1,12 +1,11 @@
 package com.dliriotech.tms.tyreservice.service;
 
+import com.dliriotech.tms.tyreservice.dto.EquipoNeumaticoResponse;
 import com.dliriotech.tms.tyreservice.dto.NeumaticoRequest;
 import com.dliriotech.tms.tyreservice.dto.NeumaticoResponse;
 
-import java.util.List;
-
 public interface NeumaticoService {
-    List<NeumaticoResponse> getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId);
+    EquipoNeumaticoResponse getAllNeumaticosByEquipoId(Integer equipoId, Integer empresaId);
 
     NeumaticoResponse saveNeumatico(NeumaticoRequest request, Integer empresaId);
 

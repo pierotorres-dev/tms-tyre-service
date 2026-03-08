@@ -9,8 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/neumaticos")
 @RequiredArgsConstructor
@@ -19,7 +17,7 @@ public class NeumaticoController {
     private final NeumaticoService neumaticoService;
 
     @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<NeumaticoResponse> getAllNeumaticosByEquipoId(
+    public EquipoNeumaticoResponse getAllNeumaticosByEquipoId(
             @PathVariable Integer equipoId,
             @RequestHeader(HeaderConstants.HEADER_EMPRESA_ID) Integer empresaId) {
         return neumaticoService.getAllNeumaticosByEquipoId(equipoId, empresaId);
