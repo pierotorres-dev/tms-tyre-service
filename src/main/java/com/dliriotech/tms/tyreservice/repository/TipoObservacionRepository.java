@@ -1,7 +1,7 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.TipoObservacion;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface TipoObservacionRepository extends ReactiveCrudRepository<TipoObservacion, Integer> {
+public interface TipoObservacionRepository extends JpaRepository<TipoObservacion, Integer> {
 }

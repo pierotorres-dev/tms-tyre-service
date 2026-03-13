@@ -1,9 +1,10 @@
 package com.dliriotech.tms.tyreservice.entity;
 
-import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
@@ -11,27 +12,38 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("catalogo_neumaticos")
+@Entity
+@Table(name = "catalogo_neumaticos")
 public class CatalogoNeumatico {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column("id_marca")
+    @Column(name = "id_marca", insertable = false, updatable = false)
     private Integer marcaId;
 
-    @Column("id_medida")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_marca")
+    private MarcaNeumatico marca;
+
+    @Column(name = "id_medida", insertable = false, updatable = false)
     private Integer medidaId;
 
-    @Column("modelo_diseno")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_medida")
+    private MedidaNeumatico medida;
+
+    @Column(name = "modelo_diseno")
     private String modeloDiseno;
 
-    @Column("tipo_uso")
+    @Column(name = "tipo_uso")
     private String tipoUso;
 
-    @Column("rtd_original")
+    @Column(name = "rtd_original")
     private BigDecimal rtdOriginal;
 
-    @Column("presion_maxima_psi")
+    @Column(name = "presion_maxima_psi")
     private Integer presionMaximaPsi;
 
     private Integer treadwear;

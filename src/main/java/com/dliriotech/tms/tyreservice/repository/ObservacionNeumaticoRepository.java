@@ -1,53 +1,74 @@
 package com.dliriotech.tms.tyreservice.repository;
 
 import com.dliriotech.tms.tyreservice.entity.ObservacionNeumatico;
-import org.springframework.data.r2dbc.repository.Query;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Flux;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface ObservacionNeumaticoRepository extends ReactiveCrudRepository<ObservacionNeumatico, Integer> {
+import java.util.Collection;
+import java.util.List;
 
-    @Query("SELECT obs.id, obs.id_neumatico, obs.id_equipo, obs.posicion, obs.id_tipo_observacion, " +
-            "obs.descripcion, obs.id_estado_observacion, obs.fecha_creacion, obs.id_usuario_creacion, " +
-            "obs.fecha_resolucion, obs.id_usuario_resolucion, obs.comentario_resolucion " +
-            "FROM observaciones_neumatico AS obs " +
-            "JOIN neumaticos AS neu ON obs.id_neumatico = neu.id " +
-            "WHERE obs.id_neumatico = :neumaticoId AND neu.id_empresa = :empresaId " +
-            "AND obs.id_tipo_observacion IN (:tipoObservacionIds) AND obs.id_estado_observacion = :estadoObservacionId")
-    Flux<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdAndTipoObservacionIdsAndEstadoObservacionId(
-            Integer neumaticoId,
-            Integer empresaId,
-            Iterable<Integer> tipoObservacionIds,
-            Integer estadoObservacionId
+public interface ObservacionNeumaticoRepository extends JpaRepository<ObservacionNeumatico, Integer> {
+
+    /**
+     * Observaciones de un neumático filtradas por empresa, tipos de observación y estado.
+     * Usado para obtener observaciones solucionables por tipo de movimiento.
+     */
+    @Query("""
+        SELECT obs FROM ObservacionNeumatico obs
+        JOIN Neumatico neu ON obs.neumaticoId = neu.id
+        WHERE obs.neumaticoId = :neumaticoId AND neu.empresaId = :empresaId
+        AND obs.tipoObservacionId IN :tipoObservacionIds AND obs.estadoObservacionId = :estadoObservacionId
+        """)
+    List<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdAndTipoObservacionIdsAndEstadoObservacionId(
+        @Param("neumaticoId") Integer neumaticoId,
+        @Param("empresaId") Integer empresaId,
+        @Param("tipoObservacionIds") Collection<Integer> tipoObservacionIds,
+        @Param("estadoObservacionId") Integer estadoObservacionId
     );
 
-    @Query("SELECT obs.id, obs.id_neumatico, obs.id_equipo, obs.posicion, obs.id_tipo_observacion, " +
-            "obs.descripcion, obs.id_estado_observacion, obs.fecha_creacion, obs.id_usuario_creacion, " +
-            "obs.fecha_resolucion, obs.id_usuario_resolucion, obs.comentario_resolucion " +
-            "FROM observaciones_neumatico AS obs " +
-            "JOIN neumaticos AS neu ON obs.id_neumatico = neu.id " +
-            "WHERE obs.id_neumatico = :neumaticoId AND neu.id_empresa = :empresaId " +
-            "ORDER BY obs.fecha_creacion DESC")
-    Flux<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdOrderByFechaCreacionDesc(Integer neumaticoId, Integer empresaId);
-
-    @Query("SELECT obs.id, obs.id_neumatico, obs.id_equipo, obs.posicion, obs.id_tipo_observacion, " +
-            "obs.descripcion, obs.id_estado_observacion, obs.fecha_creacion, obs.id_usuario_creacion, " +
-            "obs.fecha_resolucion, obs.id_usuario_resolucion, obs.comentario_resolucion " +
-            "FROM observaciones_neumatico AS obs " +
-            "JOIN neumaticos AS neu ON obs.id_neumatico = neu.id " +
-            "WHERE obs.id_neumatico = :neumaticoId AND neu.id_empresa = :empresaId " +
-            "AND obs.id_estado_observacion = :estadoObservacionId ORDER BY obs.fecha_creacion DESC")
-    Flux<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdAndEstadoObservacionIdOrderByFechaCreacionDesc(
-            Integer neumaticoId,
-            Integer empresaId,
-            Integer estadoObservacionId
+    /**
+     * Todas las observaciones de un neumático filtradas por empresa, ordenadas por fecha desc.
+     */
+    @Query("""
+        SELECT obs FROM ObservacionNeumatico obs
+        JOIN Neumatico neu ON obs.neumaticoId = neu.id
+        WHERE obs.neumaticoId = :neumaticoId AND neu.empresaId = :empresaId
+        ORDER BY obs.fechaCreacion DESC
+        """)
+    List<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdOrderByFechaCreacionDesc(
+        @Param("neumaticoId") Integer neumaticoId,
+        @Param("empresaId") Integer empresaId
     );
 
-    @Query("SELECT obs.id, obs.id_neumatico, obs.id_equipo, obs.posicion, obs.id_tipo_observacion, " +
-            "obs.descripcion, obs.id_estado_observacion, obs.fecha_creacion, obs.id_usuario_creacion, " +
-            "obs.fecha_resolucion, obs.id_usuario_resolucion, obs.comentario_resolucion " +
-            "FROM observaciones_neumatico AS obs " +
-            "JOIN neumaticos AS neu ON obs.id_neumatico = neu.id " +
-            "WHERE neu.id_equipo = :equipoId AND neu.id_empresa = :empresaId AND obs.id_estado_observacion = :estadoId")
-    Flux<ObservacionNeumatico> findByEquipoIdAndEmpresaIdAndEstadoObservacionId(Integer equipoId, Integer empresaId, Integer estadoId);
+    /**
+     * Observaciones pendientes de un neumático filtradas por empresa.
+     */
+    @Query("""
+        SELECT obs FROM ObservacionNeumatico obs
+        JOIN Neumatico neu ON obs.neumaticoId = neu.id
+        WHERE obs.neumaticoId = :neumaticoId AND neu.empresaId = :empresaId
+        AND obs.estadoObservacionId = :estadoObservacionId
+        ORDER BY obs.fechaCreacion DESC
+        """)
+    List<ObservacionNeumatico> findByNeumaticoIdAndEmpresaIdAndEstadoObservacionIdOrderByFechaCreacionDesc(
+        @Param("neumaticoId") Integer neumaticoId,
+        @Param("empresaId") Integer empresaId,
+        @Param("estadoObservacionId") Integer estadoObservacionId
+    );
+
+    /**
+     * Observaciones de neumáticos de un equipo filtradas por empresa y estado.
+     */
+    @Query("""
+        SELECT obs FROM ObservacionNeumatico obs
+        JOIN Neumatico neu ON obs.neumaticoId = neu.id
+        WHERE neu.equipoId = :equipoId AND neu.empresaId = :empresaId
+        AND obs.estadoObservacionId = :estadoId
+        """)
+    List<ObservacionNeumatico> findByEquipoIdAndEmpresaIdAndEstadoObservacionId(
+        @Param("equipoId") Integer equipoId,
+        @Param("empresaId") Integer empresaId,
+        @Param("estadoId") Integer estadoId
+    );
 }

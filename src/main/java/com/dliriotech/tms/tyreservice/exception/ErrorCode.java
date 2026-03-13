@@ -64,8 +64,6 @@ public enum ErrorCode {
     MEDIDA_NEUMATICO_NOT_FOUND("TYR-CAT-006", HttpStatus.NOT_FOUND, "Medida de neumático no encontrada"),
     EQUIPO_NOT_FOUND("TYR-CAT-007", HttpStatus.NOT_FOUND, "Equipo no encontrado"),
 
-    // ── Caché ──
-    CACHE_OPERATION_ERROR("TYR-CAC-001", HttpStatus.INTERNAL_SERVER_ERROR, "Error al procesar operación de caché"),
 
     // ── Integridad de datos ──
     DATA_INTEGRITY_CONFLICT("TYR-DAT-001", HttpStatus.CONFLICT, "Conflicto de integridad de datos"),

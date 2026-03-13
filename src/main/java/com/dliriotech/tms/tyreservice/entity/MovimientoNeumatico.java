@@ -1,80 +1,89 @@
 package com.dliriotech.tms.tyreservice.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
-import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("movimientos_neumaticos")
+@Entity
+@Table(name = "movimientos_neumaticos")
 public class MovimientoNeumatico {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column("id_neumatico")
+    @Column(name = "id_neumatico")
     private Integer neumaticoId;
 
-    @Column("fecha_movimiento")
+    @Column(name = "fecha_movimiento")
     private LocalDateTime fechaMovimiento;
 
-    @Column("id_equipo_origen")
+    @Column(name = "id_equipo_origen")
     private Integer equipoOrigenId;
 
-    @Column("posicion_origen")
+    @Column(name = "posicion_origen")
     private Integer posicionOrigen;
 
-    @Column("id_equipo_destino")
+    @Column(name = "id_equipo_destino")
     private Integer equipoDestinoId;
 
-    @Column("posicion_destino")
+    @Column(name = "posicion_destino")
     private Integer posicionDestino;
 
-    @Column("id_clasificacion_origen")
+    @Column(name = "id_clasificacion_origen")
     private Integer clasificacionOrigenId;
 
-    @Column("id_clasificacion_destino")
+    @Column(name = "id_clasificacion_destino")
     private Integer clasificacionDestinoId;
 
-    @Column("id_tipo_movimiento")
+    @Column(name = "id_tipo_movimiento")
     private Integer tipoMovimientoId;
 
-    @Column("kilometraje")
     private Integer kilometraje;
 
-    @Column("rtd1")
     private BigDecimal rtd1;
 
-    @Column("rtd2")
     private BigDecimal rtd2;
 
-    @Column("rtd3")
     private BigDecimal rtd3;
 
-    @Column("rtd_actual")
+    @Column(name = "rtd_actual")
     private BigDecimal rtdActual;
 
-    @Column("rtd_post_reencauche")
+    @Column(name = "rtd_post_reencauche")
     private BigDecimal rtdPostReencauche;
 
-    @Column("id_usuario")
+    @Column(name = "id_usuario")
     private Integer usuarioId;
 
-    @Column("costo_movimiento")
+    @Column(name = "costo_movimiento")
     private BigDecimal costoMovimiento;
 
-    @Column("id_proveedor_servicio")
+    @Column(name = "id_proveedor_servicio")
     private Integer proveedorServicioId;
 
-    @Column("comentario")
     private String comentario;
+
+    @Column(name = "id_inspeccion")
+    private Integer idInspeccion;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MovimientoNeumatico that = (MovimientoNeumatico) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
