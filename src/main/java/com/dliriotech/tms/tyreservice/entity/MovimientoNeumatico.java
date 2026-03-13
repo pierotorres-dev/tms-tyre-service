@@ -71,6 +71,9 @@ public class MovimientoNeumatico {
 
     private String comentario;
 
+    @Column(name = "id_inspeccion")
+    private Integer idInspeccion;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

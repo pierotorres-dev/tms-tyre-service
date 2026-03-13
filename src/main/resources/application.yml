@@ -14,6 +14,11 @@ spring:
       connection-timeout: 2000
       max-lifetime: 1800000
       connection-test-query: SELECT 1
+      data-source-properties:
+        rewriteBatchedStatements: true
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
 
   jpa:
     hibernate:
@@ -24,6 +29,10 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 16
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
 
   threads:
     virtual:

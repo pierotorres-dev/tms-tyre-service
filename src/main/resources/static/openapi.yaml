@@ -681,31 +681,46 @@ paths:
                 path: "/api/v1/observaciones-neumaticos/1"
                 timestamp: "2023-08-06 10:30:00"
 
-  /api/v1/movimientos-neumaticos/{equipoId}/inspecciones:
+  /api/v1/movimientos-neumaticos/inspeccion-lote:
     post:
       tags:
-        - inspecciones
-      summary: Finalizar inspección de neumáticos
-      description: Finaliza una inspección de neumáticos para un equipo específico, actualizando las mediciones RTD y registrando observaciones
-      operationId: finalizarInspeccion
+        - movimientos-neumaticos
+      summary: Procesar lote de neumáticos inspeccionados
+      description: >
+        Endpoint consumido por el fleet-service (orquestador).
+        Recibe un lote de neumáticos inspeccionados junto con sus observaciones
+        y los procesa de forma atómica (RTD, movimientos, observaciones).
+      operationId: procesarLoteNeumaticos
       parameters:
-        - name: equipoId
-          in: path
+        - name: X-User-Id
+          in: header
           required: true
-          description: ID del equipo inspeccionado
+          description: ID del usuario que realiza la inspección
           schema:
             type: integer
             minimum: 1
-          example: 123
+          example: 5
+        - name: X-Empresa-Id
+          in: header
+          required: true
+          description: ID de la empresa (tenant isolation)
+          schema:
+            type: integer
+            minimum: 1
+          example: 1
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FinalizarInspeccionRequest'
+              $ref: '#/components/schemas/LoteNeumaticosInspeccionRequest'
       responses:
-        '204':
-          description: Inspección finalizada exitosamente
+        '201':
+          description: Lote de inspección procesado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspeccionLoteResponse'
         '400':
           description: Datos de entrada inválidos o reglas de negocio violadas
           content:
@@ -715,10 +730,10 @@ paths:
               example:
                 code: "TYR-INS-VAL-001"
                 message: "Datos de inspección inválidos"
-                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                path: "/api/v1/movimientos-neumaticos/inspeccion-lote"
                 timestamp: "2023-08-06 10:30:00"
         '404':
-          description: Equipo no encontrado
+          description: Equipo o neumático no encontrado
           content:
             application/json:
               schema:
@@ -726,7 +741,7 @@ paths:
               example:
                 code: "TYR-EQU-NOT-001"
                 message: "Equipo con ID 123 no encontrado"
-                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                path: "/api/v1/movimientos-neumaticos/inspeccion-lote"
                 timestamp: "2023-08-06 10:30:00"
         '500':
           description: Error interno del servidor
@@ -737,11 +752,62 @@ paths:
               example:
                 code: "TYR-INS-OPE-001"
                 message: "Error al procesar inspección"
-                path: "/api/v1/movimientos-neumaticos/123/inspecciones"
+                path: "/api/v1/movimientos-neumaticos/inspeccion-lote"
                 timestamp: "2023-08-06 10:30:00"
 
 components:
   schemas:
+    InspeccionLoteResponse:
+      type: object
+      description: Response del procesamiento de un lote de inspección con las observaciones registradas y resueltas
+      properties:
+        observacionesCreadas:
+          type: array
+          description: Observaciones nuevas registradas durante la inspección
+          items:
+            $ref: '#/components/schemas/ObservacionCreadaResponse'
+        observacionesResueltasIds:
+          type: array
+          description: IDs de las observaciones que fueron resueltas durante la inspección
+          items:
+            type: integer
+            format: int32
+          example: [42, 55, 67]
+
+    ObservacionCreadaResponse:
+      type: object
+      description: Datos de una observación de neumático recién creada
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: ID auto-generado de la observación
+          example: 101
+        neumaticoId:
+          type: integer
+          format: int32
+          description: ID del neumático observado
+          example: 10
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo al que pertenece el neumático
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          description: Posición del neumático en el equipo
+          example: 3
+        tipoObservacionId:
+          type: integer
+          format: int32
+          description: ID del tipo de observación
+          example: 5
+        descripcion:
+          type: string
+          description: Descripción de la observación
+          example: "Desgaste irregular en la banda de rodamiento"
+
     EquipoNeumaticoResponse:
       type: object
       description: Wrapper que agrupa neumáticos y observaciones pendientes de un equipo
@@ -1367,50 +1433,116 @@ components:
           description: Fecha y hora del error
           example: "2023-08-06 10:30:00"
 
-    FinalizarInspeccionRequest:
+    LoteNeumaticosInspeccionRequest:
       type: object
       required:
-        - usuarioId
-        - empresaId
+        - inspeccionId
+        - equipoId
         - tipoEquipoId
-        - kilometraje
         - neumaticosInspeccionados
       properties:
+        inspeccionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID de la inspección generado por fleet-service
+          example: 456
         equipoId:
           type: integer
           format: int32
-          description: ID del equipo (será sobrescrito por el parámetro de la URL)
+          minimum: 1
+          description: ID del equipo inspeccionado
           example: 123
-        usuarioId:
-          type: integer
-          format: int32
-          description: ID del usuario que realiza la inspección
-          example: 5
-        empresaId:
-          type: integer
-          format: int32
-          description: ID de la empresa
-          example: 1
         tipoEquipoId:
           type: integer
           format: int32
+          minimum: 1
           description: ID del tipo de equipo
           example: 2
         kilometraje:
           type: integer
           format: int32
           minimum: 0
-          description: Kilometraje actual del equipo
+          nullable: true
+          description: Kilometraje actual del equipo (si es null se obtiene de BD)
           example: 185000
         neumaticosInspeccionados:
           type: array
-          description: Lista de neumáticos inspeccionados
+          description: Lista de neumáticos inspeccionados con mediciones RTD
           items:
             $ref: '#/components/schemas/NeumaticoInspeccionadoRequest'
+        observacionesNuevas:
+          type: array
+          nullable: true
+          description: Observaciones nuevas de neumáticos detectadas durante la inspección
+          items:
+            $ref: '#/components/schemas/ObservacionNeumaticoLoteRequest'
+        observacionesResueltas:
+          type: array
+          nullable: true
+          description: Observaciones pendientes que fueron resueltas durante la inspección
+          items:
+            $ref: '#/components/schemas/ObservacionNeumaticoResolucionLoteRequest'
+
+    ObservacionNeumaticoLoteRequest:
+      type: object
+      required:
+        - neumaticoId
+        - equipoId
+        - posicion
+        - tipoObservacionId
+        - descripcion
+      properties:
+        neumaticoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del neumático observado
+          example: 10
+        equipoId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del equipo al que pertenece el neumático
+          example: 123
+        posicion:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Posición del neumático en el equipo
+          example: 3
+        tipoObservacionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID del tipo de observación
+          example: 5
+        descripcion:
+          type: string
+          description: Descripción de la observación
+          example: "Desgaste irregular en la banda de rodamiento"
+
+    ObservacionNeumaticoResolucionLoteRequest:
+      type: object
+      required:
+        - observacionId
+      properties:
+        observacionId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: ID de la observación pendiente a resolver
+          example: 42
+        comentarioResolucion:
+          type: string
+          nullable: true
+          description: Comentario opcional de resolución
+          example: "Resuelto durante inspección periódica"
 
     NeumaticoInspeccionadoRequest:
       type: object
       required:
+        - neumaticoId
         - rtd1
         - rtd2
         - rtd3
@@ -1418,6 +1550,7 @@ components:
         neumaticoId:
           type: integer
           format: int32
+          minimum: 1
           description: ID del neumático inspeccionado
           example: 1
         rtd1:
@@ -1438,8 +1571,3 @@ components:
           minimum: 0.0
           description: Tercera medición RTD (máximo 3 enteros y 2 decimales)
           example: 15.32
-        observacionNeumaticoList:
-          type: array
-          description: Lista de observaciones encontradas durante la inspección
-          items:
-            $ref: '#/components/schemas/ObservacionNeumaticoNuevoRequest'

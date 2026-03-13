@@ -49,6 +49,9 @@ public class ObservacionNeumatico {
     @Column(name = "comentario_resolucion")
     private String comentarioResolucion;
 
+    @Column(name = "id_inspeccion")
+    private Integer idInspeccion;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
